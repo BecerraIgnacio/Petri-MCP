@@ -1,0 +1,28 @@
+# Claude / ClaudeOS — never publish
+CLAUDE.md
+.claude/
+.claudeignore
+attachments/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Deps / build (common across stacks — prune per project)
+node_modules/
+dist/
+build/
+target/
+__pycache__/
+*.pyc
+.venv/
+venv/
