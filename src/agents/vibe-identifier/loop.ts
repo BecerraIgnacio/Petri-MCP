@@ -3,6 +3,7 @@ import { getClient, getModel } from "../../shared/llm.js";
 import { VIBE_IDENTIFIER_SYSTEM } from "./prompt.js";
 import { explorationTools, submitFindingsTool } from "./tools.js";
 import { dispatchFileTool } from "../../shared/file-tools.js";
+import { preloadEntryFiles, formatPreloadSection } from "./preload.js";
 import {
   VibeIdentifierOutput,
   parseVibeIdentifierInput,
@@ -10,7 +11,7 @@ import {
   type VibeIdentifierOutput as Output,
 } from "./schema.js";
 
-const MAX_STEPS = 15;
+const MAX_STEPS = 10;
 const TOOL_RESULT_MAX_CHARS = 16_000;
 const DEBUG = process.env.PETRI_DEBUG === "1";
 
@@ -26,15 +27,45 @@ function clip(text: string): string {
   return text.slice(0, TOOL_RESULT_MAX_CHARS) + `\n…[clipped, ${text.length} chars total]`;
 }
 
-function buildUserMessage(input: VibeIdentifierInput): string {
-  const lines = [
-    `Project: ${input.displayName}`,
-  ];
+/**
+ * Kimi via OpenRouter sometimes ignores `tool_choice: "required"` and emits prose
+ * with a JSON object (often inside a ```json code block) instead of calling
+ * submit_findings. If the content contains a valid VibeIdentifierOutput, accept
+ * it and treat the run as successful.
+ */
+function tryExtractFindingsFromContent(content: string | null | undefined): Output | undefined {
+  if (!content) return undefined;
+  const candidates: string[] = [];
+  const codeBlock = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (codeBlock?.[1]) candidates.push(codeBlock[1].trim());
+  const firstBrace = content.indexOf("{");
+  const lastBrace = content.lastIndexOf("}");
+  if (firstBrace >= 0 && lastBrace > firstBrace) {
+    candidates.push(content.slice(firstBrace, lastBrace + 1));
+  }
+  for (const raw of candidates) {
+    try {
+      const parsed = JSON.parse(raw);
+      const validated = VibeIdentifierOutput.safeParse(parsed);
+      if (validated.success) return validated.data;
+    } catch {
+      // try next candidate
+    }
+  }
+  return undefined;
+}
+
+function buildUserMessage(input: VibeIdentifierInput, preloadBlock: string): string {
+  const lines: string[] = [];
+  if (preloadBlock) {
+    lines.push(preloadBlock, "");
+  }
+  lines.push(`Project: ${input.displayName}`);
   if (input.hints?.brand_name) lines.push(`Hint — brand_name: ${input.hints.brand_name}`);
   if (input.hints?.site_type) lines.push(`Hint — site_type: ${input.hints.site_type}`);
   lines.push(
     "",
-    "Begin by globbing the project. Then read the highest-signal files. Use grep to locate colors, headlines, and logo elements. Submit findings via the submit_findings tool when you have enough evidence.",
+    "If PRELOADED FILES above contains everything you need, skip straight to submit_findings. Otherwise glob to discover, read sparingly, grep for tokens, and submit findings.",
   );
   return lines.join("\n");
 }
@@ -45,9 +76,16 @@ export async function runVibeIdentifier(rawInput: unknown): Promise<Output> {
   const client = getClient();
   const model = getModel();
 
+  const preloaded = await preloadEntryFiles(source).catch((err) => {
+    log(`preload failed: ${(err as Error).message}`);
+    return [];
+  });
+  log(`preloaded ${preloaded.length} file(s): ${preloaded.map((f) => f.path).join(", ")}`);
+  const preloadBlock = formatPreloadSection(preloaded);
+
   const messages: ChatMessage[] = [
     { role: "system", content: VIBE_IDENTIFIER_SYSTEM },
-    { role: "user", content: buildUserMessage(input) },
+    { role: "user", content: buildUserMessage(input, preloadBlock) },
   ];
 
   const tools = [...explorationTools, submitFindingsTool];
@@ -59,7 +97,7 @@ export async function runVibeIdentifier(rawInput: unknown): Promise<Output> {
       model,
       messages,
       tools,
-      tool_choice: "auto",
+      tool_choice: "required",
       temperature: 0.2,
     });
     log(`step ${step}: model returned in ${Date.now() - t0}ms`);
@@ -72,9 +110,18 @@ export async function runVibeIdentifier(rawInput: unknown): Promise<Output> {
     const calls: ToolCall[] = msg.tool_calls ?? [];
     log(`step ${step}: ${calls.length} tool call(s) | content: ${msg.content?.slice(0, 100) ?? "<none>"}`);
     if (calls.length === 0) {
-      throw new Error(
-        `model returned no tool call at step ${step}; content: ${msg.content?.slice(0, 200) ?? "<empty>"}`,
-      );
+      const recovered = tryExtractFindingsFromContent(msg.content);
+      if (recovered) {
+        log(`step ${step}: recovered findings from prose content`);
+        return recovered;
+      }
+      log(`step ${step}: no tool call AND no recoverable JSON — nudging`);
+      messages.push({
+        role: "user",
+        content:
+          "Output ONLY tool calls. Do not write prose or JSON in content. Call submit_findings now with your findings as the tool arguments.",
+      });
+      continue;
     }
 
     for (const call of calls) {
