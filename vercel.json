@@ -1,5 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "tsc -p tsconfig.json",
+  "outputDirectory": "dist",
   "functions": {
     "api/mcp.ts": {
       "maxDuration": 300
