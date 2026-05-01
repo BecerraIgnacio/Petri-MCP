@@ -170,7 +170,13 @@ async function main() {
   console.error("petri-mcp listening on stdio");
 }
 
-main().catch((err) => {
-  console.error("petri-mcp failed to start:", err);
-  process.exit(1);
-});
+const isDirectRun =
+  typeof process.argv[1] === "string" &&
+  import.meta.url === `file://${process.argv[1]}`;
+
+if (isDirectRun) {
+  main().catch((err) => {
+    console.error("petri-mcp failed to start:", err);
+    process.exit(1);
+  });
+}

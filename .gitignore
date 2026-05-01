@@ -26,3 +26,10 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+
+# Vercel
+.vercel/
+
+# Generated demo output
+demo/
+.vercel

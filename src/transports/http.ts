@@ -12,7 +12,7 @@ export async function startHttpTransport(
   port: number,
 ): Promise<void> {
   const httpServer = http.createServer((req, res) => {
-    handle(req, res, buildServer).catch((err) => {
+    handleMcpRequest(req, res, buildServer).catch((err) => {
       process.stderr.write(`petri-mcp http error: ${(err as Error).message}\n`);
       if (!res.headersSent) {
         res.statusCode = 500;
@@ -28,7 +28,11 @@ export async function startHttpTransport(
   process.stderr.write(`petri-mcp listening on http://localhost:${port}\n`);
 }
 
-async function handle(
+/**
+ * Handle a single MCP HTTP request. Exported so serverless hosts (Vercel Node Functions, etc.)
+ * can call this directly without spinning up a long-lived http.Server.
+ */
+export async function handleMcpRequest(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   buildServer: () => McpServer,
