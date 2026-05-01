@@ -1,11 +1,19 @@
 import { Redis } from "@upstash/redis";
 import {
   EVENTS_KEY,
+  GENERATIONS_KEY,
+  GenerationRecord,
+  LOCK_KEY,
   MAX_EVENTS_PER_VARIANT,
   RUN_META_KEY,
   RunMeta,
+  SCORES_KEY,
+  ScoresRecord,
   StoredEvent,
 } from "./run-meta.js";
+import { VibeIdentifierOk } from "../agents/vibe-identifier/schema.js";
+
+type LockManifest = ReturnType<typeof VibeIdentifierOk.parse>;
 
 let cached: Redis | null = null;
 
@@ -61,6 +69,59 @@ export async function getRecentEvents(
       out.push(StoredEvent.parse(parsed));
     } catch {
       // skip malformed entries
+    }
+  }
+  return out;
+}
+
+export async function getLockManifest(runId: string): Promise<LockManifest | null> {
+  const raw = await getRedis().get(LOCK_KEY(runId));
+  if (raw == null) return null;
+  return VibeIdentifierOk.parse(raw);
+}
+
+export async function setLockManifest(
+  runId: string,
+  manifest: LockManifest,
+): Promise<void> {
+  VibeIdentifierOk.parse(manifest);
+  await getRedis().set(LOCK_KEY(runId), manifest);
+}
+
+export async function getScores(
+  runId: string,
+  generation: number,
+): Promise<ScoresRecord | null> {
+  const raw = await getRedis().get(SCORES_KEY(runId, generation));
+  if (raw == null) return null;
+  return ScoresRecord.parse(raw);
+}
+
+export async function setScores(
+  runId: string,
+  scores: ScoresRecord,
+): Promise<void> {
+  ScoresRecord.parse(scores);
+  await getRedis().set(SCORES_KEY(runId, scores.generation), scores);
+}
+
+export async function appendGeneration(
+  runId: string,
+  record: GenerationRecord,
+): Promise<void> {
+  GenerationRecord.parse(record);
+  await getRedis().lpush(GENERATIONS_KEY(runId), JSON.stringify(record));
+}
+
+export async function getGenerations(runId: string): Promise<GenerationRecord[]> {
+  const raw = await getRedis().lrange(GENERATIONS_KEY(runId), 0, -1);
+  const out: GenerationRecord[] = [];
+  for (const r of raw) {
+    try {
+      const parsed = typeof r === "string" ? JSON.parse(r) : r;
+      out.push(GenerationRecord.parse(parsed));
+    } catch {
+      // skip malformed
     }
   }
   return out;

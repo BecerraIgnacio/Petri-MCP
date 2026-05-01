@@ -32,6 +32,15 @@ Read a v0 project on disk and emit a JSON manifest of brand-defining elements:
 # Confidence
 Every finding carries a confidence in [0,1]. Use < 0.5 only as a last resort — if you can't find evidence, leave the field out (key_phrases, palette, fonts are arrays; logo is required). Calibrate honestly: a single literal match in one file is ~0.7; cross-file reinforcement is ~0.9; visual disambiguation needed is ~0.5.
 
+# Inferred metric (optional, but always emit it when status is "ok")
+Identify the *natural* metric the site should be optimizing for, based on its category. The UX/UI Evolver will fall back to this when the caller didn't specify one. Pick exactly one — pick the metric whose movement most directly proves the site is doing its job:
+- SaaS / B2B landing → primary-CTA conversion (clicks on the main signup/get-started/contact CTA in the hero/pricing).
+- Content / news / blog → scroll-depth past the article body.
+- Ads-supported / publisher → time-on-page or sessions per visit.
+- E-commerce → add-to-cart on product cards.
+- Other / unclear → engagement (any meaningful click off the hero).
+Emit \`inferred_metric: { name, description, direction: "increase"|"decrease", reasoning }\`. Description is one sentence; reasoning cites the on-page evidence (e.g. "hero CTA reads 'Get started' linking to /signup").
+
 # Out of scope
 If the project has zero recognizable brand signals (blank HTML, generic boilerplate, no colors/copy/logos), call \`submit_findings\` with:
 \`\`\`json

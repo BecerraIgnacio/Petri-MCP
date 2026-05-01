@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { runStartSplit } from "../src/shared/start-split.js";
 import type { RunMeta } from "../src/shared/run-meta.js";
+import type { z } from "zod";
+import type { VibeIdentifierOk } from "../src/agents/vibe-identifier/schema.js";
+
+type LockManifest = z.infer<typeof VibeIdentifierOk>;
 
 const FAKE_BLOB_BASE = "https://test.public.blob.vercel-storage.com";
 
@@ -215,6 +219,99 @@ describe("runStartSplit", () => {
     );
     expect(result.reporterInjected).toBe(false);
     for (const html of captured) expect(html).not.toContain("data-petri");
+  });
+
+  it("persists targetMetric, inferredMetric, originSource onto RunMeta when provided", async () => {
+    const pub = makePublishStub();
+    const save = makeSaveStub();
+    const savedLocks: Array<{ runId: string; manifest: LockManifest }> = [];
+    await runStartSplit(
+      {
+        runId: "demo-cfg-001",
+        championVariantId: "v0",
+        splitRatio: 90,
+        variants: [
+          { id: "v0", files: HTML_FILES },
+          { id: "v1", files: HTML_FILES },
+        ],
+        targetMetric: {
+          name: "primary_cta_clicks",
+          description: "clicks on hero CTA",
+          direction: "increase",
+        },
+        inferredMetric: {
+          name: "any_engagement",
+          description: "any click off the hero",
+          direction: "increase",
+          reasoning: "fallback metric",
+        },
+        originSource: {
+          kind: "github",
+          repoUrl: "https://github.com/foo/bar",
+          repoRef: "main",
+        },
+      },
+      "https://petri-mcp.vercel.app",
+      {
+        publish: pub.publish,
+        saveMeta: save.saveMeta,
+        saveLock: async (runId: string, manifest: LockManifest) => {
+          savedLocks.push({ runId, manifest });
+        },
+      },
+    );
+    const saved = save.saved[0]!;
+    expect(saved.targetMetric?.name).toBe("primary_cta_clicks");
+    expect(saved.inferredMetric?.reasoning).toBe("fallback metric");
+    expect(saved.originSource).toMatchObject({ kind: "github", repoUrl: "https://github.com/foo/bar" });
+    expect(savedLocks).toHaveLength(0); // no lockManifest passed
+  });
+
+  it("persists the lock manifest to its own KV key when lockManifest is provided", async () => {
+    const pub = makePublishStub();
+    const save = makeSaveStub();
+    const savedLocks: Array<{ runId: string; manifest: LockManifest }> = [];
+    const lock: LockManifest = {
+      status: "ok",
+      brand_name: "SimpleFit",
+      logo: {
+        type: "wordmark",
+        value: "SimpleFit",
+        selector: ".brand",
+        evidence: { file: "index.html", line: 1, match: "SimpleFit" },
+        confidence: 0.95,
+      },
+      key_phrases: [],
+      palette: [],
+      fonts: [],
+      voice: { tone: [], vocabulary_signals: [], forbidden_drift: [] },
+      locked_selectors: [
+        { selector: ".brand", scope: "index.html", property: "text-content", reason: "wordmark" },
+      ],
+    };
+    await runStartSplit(
+      {
+        runId: "demo-cfg-002",
+        championVariantId: "v0",
+        splitRatio: 90,
+        variants: [
+          { id: "v0", files: HTML_FILES },
+          { id: "v1", files: HTML_FILES },
+        ],
+        lockManifest: lock,
+      },
+      "https://petri-mcp.vercel.app",
+      {
+        publish: pub.publish,
+        saveMeta: save.saveMeta,
+        saveLock: async (runId: string, manifest: LockManifest) => {
+          savedLocks.push({ runId, manifest });
+        },
+      },
+    );
+    expect(savedLocks).toHaveLength(1);
+    expect(savedLocks[0]!.runId).toBe("demo-cfg-002");
+    expect(savedLocks[0]!.manifest.brand_name).toBe("SimpleFit");
   });
 
   it("does not modify non-HTML files", async () => {

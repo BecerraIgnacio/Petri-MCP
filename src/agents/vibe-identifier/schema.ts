@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { FileSource } from "../../shared/file-source.js";
+import { InferredMetric } from "../../shared/run-meta.js";
 
 const VibeIdentifierInputMeta = z.object({
   displayName: z.string().min(1),
@@ -91,6 +92,7 @@ export const VibeIdentifierOk = z.object({
   fonts: z.array(FontEntry),
   voice: Voice,
   locked_selectors: z.array(LockedSelector).min(1),
+  inferred_metric: InferredMetric.optional(),
   notes: z.string().optional(),
 });
 

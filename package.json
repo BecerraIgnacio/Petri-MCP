@@ -19,6 +19,7 @@
     "agent:vibe": "tsx scripts/run-vibe.ts",
     "smoke:split": "tsx scripts/smoke-split.ts",
     "smoke:events": "tsx scripts/smoke-events.ts",
+    "metrics": "tsx scripts/read-metrics.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json"

@@ -11,9 +11,13 @@ import { dispatchFileTool } from "../../shared/file-tools.js";
 import {
   EvolverOutput,
   parseEvolverInput,
+  resolveEvolverMetric,
   type EvolverInput as Input,
   type EvolverOutput as Output,
 } from "./schema.js";
+import type { TargetMetric } from "../../shared/run-meta.js";
+
+type ResolvedMetric = ReturnType<typeof resolveEvolverMetric>;
 import { findOverlaps } from "./validator.js";
 
 const MAX_STEPS = 25;
@@ -32,14 +36,18 @@ function clip(text: string): string {
   return text.slice(0, TOOL_RESULT_MAX_CHARS) + `\n…[clipped, ${text.length} chars total]`;
 }
 
-function buildUserMessage(input: Input): string {
+function buildUserMessage(input: Input, metric: ResolvedMetric): string {
+  const fallbackNote =
+    !input.targetMetric && input.lockManifest.inferred_metric
+      ? " (inferred from the lock manifest — no explicit metric was provided by the caller)"
+      : "";
   const lines = [
     `Project: ${input.displayName}`,
     `Variants requested: ${input.nVariants}`,
     "",
-    `Target metric: ${input.targetMetric.name}`,
-    `Direction: ${input.targetMetric.direction}`,
-    `Description: ${input.targetMetric.description}`,
+    `Target metric: ${metric.name}${fallbackNote}`,
+    `Direction: ${metric.direction}`,
+    `Description: ${metric.description}`,
     "",
     "Lock manifest (the brand-defining elements you must not mutate):",
     "```json",
@@ -57,9 +65,10 @@ export async function runUxUiEvolver(rawInput: unknown): Promise<Output> {
   const client = getClient();
   const model = getModel();
 
+  const metric: TargetMetric = resolveEvolverMetric(input);
   const messages: ChatMessage[] = [
     { role: "system", content: UX_UI_EVOLVER_SYSTEM },
-    { role: "user", content: buildUserMessage(input) },
+    { role: "user", content: buildUserMessage(input, metric) },
   ];
 
   const tools = [...explorationTools, lockCheckTool, submitVariantsTool];

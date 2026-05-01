@@ -1,26 +1,24 @@
 import { z } from "zod";
 import type { FileSource } from "../../shared/file-source.js";
 import { VibeIdentifierOk } from "../vibe-identifier/schema.js";
+import { TargetMetric } from "../../shared/run-meta.js";
 
-export const TargetMetric = z.object({
-  name: z.string().min(1),
-  description: z.string().min(1),
-  direction: z.enum(["increase", "decrease"]),
-});
-export type TargetMetric = z.infer<typeof TargetMetric>;
+export { TargetMetric };
 
 const EvolverInputMeta = z.object({
   displayName: z.string().min(1),
   lockManifest: VibeIdentifierOk,
-  targetMetric: TargetMetric,
+  targetMetric: TargetMetric.optional(),
   nVariants: z.number().int().min(1).max(5).default(3),
 });
+
+type TargetMetricType = z.infer<typeof TargetMetric>;
 
 export interface EvolverInput {
   source: FileSource;
   displayName: string;
   lockManifest: z.infer<typeof VibeIdentifierOk>;
-  targetMetric: TargetMetric;
+  targetMetric?: TargetMetricType;
   nVariants: number;
 }
 
@@ -40,9 +38,24 @@ export function parseEvolverInput(raw: unknown): EvolverInput {
     source,
     displayName: meta.displayName,
     lockManifest: meta.lockManifest,
-    targetMetric: meta.targetMetric,
+    ...(meta.targetMetric ? { targetMetric: meta.targetMetric } : {}),
     nVariants: meta.nVariants,
   };
+}
+
+export function resolveEvolverMetric(input: EvolverInput): TargetMetricType {
+  if (input.targetMetric) return input.targetMetric;
+  const inferred = input.lockManifest.inferred_metric;
+  if (inferred) {
+    return {
+      name: inferred.name,
+      description: inferred.description,
+      direction: inferred.direction,
+    };
+  }
+  throw new Error(
+    "runUxUiEvolver: no targetMetric provided and lockManifest has no inferred_metric — pass targetMetric or run vibe_identifier with the inferred_metric prompt enabled.",
+  );
 }
 
 const Reasoned = { reason: z.string().min(1) };

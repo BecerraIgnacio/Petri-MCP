@@ -1,7 +1,16 @@
 import { publishVariantFiles, type PublishFile } from "./publish.js";
-import { setRunMeta } from "./run-store.js";
-import type { RunMeta } from "./run-meta.js";
+import { setLockManifest, setRunMeta } from "./run-store.js";
+import type {
+  InferredMetric,
+  OriginSource,
+  RunMeta,
+  TargetMetric,
+} from "./run-meta.js";
+import type { VibeIdentifierOk } from "../agents/vibe-identifier/schema.js";
+import type { z } from "zod";
 import { injectReporter, isHtmlPath } from "./inject-reporter.js";
+
+type LockManifest = z.infer<typeof VibeIdentifierOk>;
 
 export interface StartSplitVariantInput {
   id: string;
@@ -14,6 +23,11 @@ export interface StartSplitInput {
   splitRatio: number;
   variants: StartSplitVariantInput[];
   injectReporter?: boolean;
+  /** Optional run-level config persisted to KV when present. */
+  targetMetric?: TargetMetric;
+  inferredMetric?: InferredMetric;
+  lockManifest?: LockManifest;
+  originSource?: OriginSource;
 }
 
 export interface StartSplitResult {
@@ -31,6 +45,7 @@ export interface StartSplitResult {
 export interface StartSplitDeps {
   publish?: typeof publishVariantFiles;
   saveMeta?: typeof setRunMeta;
+  saveLock?: typeof setLockManifest;
   now?: () => number;
 }
 
@@ -41,6 +56,7 @@ export async function runStartSplit(
 ): Promise<StartSplitResult> {
   const publish = deps.publish ?? publishVariantFiles;
   const saveMeta = deps.saveMeta ?? setRunMeta;
+  const saveLock = deps.saveLock ?? setLockManifest;
   const now = deps.now ?? Date.now;
 
   const variantIds = input.variants.map((v) => v.id);
@@ -93,8 +109,15 @@ export async function runStartSplit(
     blobBase,
     files,
     createdAt: now(),
+    currentGeneration: 1,
+    ...(input.targetMetric ? { targetMetric: input.targetMetric } : {}),
+    ...(input.inferredMetric ? { inferredMetric: input.inferredMetric } : {}),
+    ...(input.originSource ? { originSource: input.originSource } : {}),
   };
   await saveMeta(meta);
+  if (input.lockManifest) {
+    await saveLock(input.runId, input.lockManifest);
+  }
 
   return {
     status: "ok",
