@@ -5,7 +5,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { GitHubFileSource } from "../src/shared/sources/github.js";
 
 const SKIP_NET = process.env.PETRI_SKIP_NET === "1";
-const TEST_REPO = "https://github.com/BecerraIgnacio/petri-MCP";
+const TEST_REPO = "https://github.com/BecerraIgnacio/simplefit-demo";
 
 describe.skipIf(SKIP_NET)("GitHubFileSource", () => {
   let cacheRoot: string;

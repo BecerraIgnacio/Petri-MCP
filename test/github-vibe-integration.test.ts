@@ -8,7 +8,7 @@ import { runVibeIdentifier } from "../src/agents/vibe-identifier/index.js";
 
 const HAS_KEY = !!process.env.OPENROUTER_API_KEY;
 const SKIP_NET = process.env.PETRI_SKIP_NET === "1";
-const TEST_REPO = "https://github.com/BecerraIgnacio/petri-MCP";
+const TEST_REPO = "https://github.com/BecerraIgnacio/simplefit-demo";
 
 describe.skipIf(!HAS_KEY || SKIP_NET)("GitHubFileSource — vibe-identifier round trip", () => {
   let cacheRoot: string;

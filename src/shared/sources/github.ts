@@ -1,13 +1,12 @@
 import path from "node:path";
 import os from "node:os";
 import { promises as fs } from "node:fs";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
+import { x as tarExtract } from "tar";
 import { LocalFileSource, type FileSource, type GrepHit } from "../file-source.js";
 
-const runGit = promisify(execFile);
-
-const CLONE_TIMEOUT_MS = 60_000;
+const FETCH_TIMEOUT_MS = 60_000;
 const DEFAULT_CACHE_ROOT = path.join(os.tmpdir(), "petri-cache");
 
 export interface GitHubFileSourceOptions {
@@ -23,21 +22,25 @@ interface ParsedGitHubUrl {
   ref?: string;
 }
 
+/**
+ * Downloads a GitHub repo as a tarball via the GitHub API and extracts it to a
+ * cache directory, then delegates all I/O to a LocalFileSource. Uses tarball
+ * (not `git clone`) because Vercel's Node Lambda runtime doesn't include the
+ * git binary.
+ */
 export class GitHubFileSource implements FileSource {
   private readonly parsed: ParsedGitHubUrl;
   private readonly ref?: string;
   private readonly token?: string;
   private readonly cacheRoot: string;
-  private readonly cloneUrl: string;
   private inner?: LocalFileSource;
-  private clonePromise?: Promise<LocalFileSource>;
+  private downloadPromise?: Promise<LocalFileSource>;
 
   constructor(opts: GitHubFileSourceOptions) {
     this.parsed = parseGitHubUrl(opts.repoUrl);
     this.ref = opts.ref ?? this.parsed.ref;
     this.token = opts.token;
     this.cacheRoot = opts.cacheRoot ?? DEFAULT_CACHE_ROOT;
-    this.cloneUrl = buildCloneUrl(this.parsed, this.token);
   }
 
   displayName(): string {
@@ -45,25 +48,25 @@ export class GitHubFileSource implements FileSource {
   }
 
   async ensureReady(): Promise<void> {
-    await this.ensureCloned();
+    await this.ensureDownloaded();
   }
 
   async readFile(args: { path: string }): Promise<string> {
-    return (await this.ensureCloned()).readFile(args);
+    return (await this.ensureDownloaded()).readFile(args);
   }
 
   async glob(args: { pattern: string }): Promise<string[]> {
-    return (await this.ensureCloned()).glob(args);
+    return (await this.ensureDownloaded()).glob(args);
   }
 
   async grep(args: { pattern: string; pathGlob?: string; flags?: string }): Promise<GrepHit[]> {
-    return (await this.ensureCloned()).grep(args);
+    return (await this.ensureDownloaded()).grep(args);
   }
 
-  private async ensureCloned(): Promise<LocalFileSource> {
+  private async ensureDownloaded(): Promise<LocalFileSource> {
     if (this.inner) return this.inner;
-    if (!this.clonePromise) this.clonePromise = this.cloneOnce();
-    this.inner = await this.clonePromise;
+    if (!this.downloadPromise) this.downloadPromise = this.downloadOnce();
+    this.inner = await this.downloadPromise;
     return this.inner;
   }
 
@@ -72,21 +75,48 @@ export class GitHubFileSource implements FileSource {
     return path.join(this.cacheRoot, `${this.parsed.owner}-${this.parsed.repo}-${refKey}`);
   }
 
-  private async cloneOnce(): Promise<LocalFileSource> {
+  private async downloadOnce(): Promise<LocalFileSource> {
     const target = this.cacheDir();
     if (await dirIsPopulated(target)) {
       return new LocalFileSource(target);
     }
-    await fs.mkdir(path.dirname(target), { recursive: true });
-    const args = ["clone", "--depth", "1"];
-    if (this.ref) args.push("--branch", this.ref);
-    args.push(this.cloneUrl, target);
+
+    const tmpTarget = `${target}.partial-${process.pid}-${Date.now()}`;
+    await fs.mkdir(tmpTarget, { recursive: true });
+
     try {
-      await runGit("git", args, { timeout: CLONE_TIMEOUT_MS });
+      const refPath = this.ref ? `/${encodeURIComponent(this.ref)}` : "";
+      const url = `https://api.github.com/repos/${this.parsed.owner}/${this.parsed.repo}/tarball${refPath}`;
+      const headers: Record<string, string> = {
+        "User-Agent": "petri-mcp",
+        Accept: "application/vnd.github+json",
+      };
+      if (this.token) headers["Authorization"] = `token ${this.token}`;
+
+      const res = await fetch(url, {
+        headers,
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      });
+      if (!res.ok || !res.body) {
+        throw new Error(
+          `github tarball fetch failed for ${this.displayName()}: ${res.status} ${res.statusText}`,
+        );
+      }
+
+      // node-tar autodetects gzip; strip the top-level <owner>-<repo>-<sha>/ folder
+      await pipeline(
+        Readable.fromWeb(res.body as unknown as ReadableStream<Uint8Array>),
+        tarExtract({ cwd: tmpTarget, strip: 1 }),
+      );
+
+      // Atomic-ish swap so partial extracts don't poison the cache
+      await fs.rename(tmpTarget, target);
     } catch (err) {
-      const msg = (err as NodeJS.ErrnoException).message ?? String(err);
-      throw new Error(`git clone failed for ${this.displayName()}: ${msg}`);
+      await fs.rm(tmpTarget, { recursive: true, force: true }).catch(() => {});
+      const msg = (err as Error).message ?? String(err);
+      throw new Error(`github tarball download failed for ${this.displayName()}: ${msg}`);
     }
+
     return new LocalFileSource(target);
   }
 }
@@ -124,9 +154,4 @@ function parseGitHubUrl(url: string): ParsedGitHubUrl {
     ref = rest.join("/");
   }
   return { owner, repo, ref };
-}
-
-function buildCloneUrl(parsed: ParsedGitHubUrl, token?: string): string {
-  const auth = token ? `x-access-token:${encodeURIComponent(token)}@` : "";
-  return `https://${auth}github.com/${parsed.owner}/${parsed.repo}.git`;
 }
