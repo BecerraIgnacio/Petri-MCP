@@ -31,11 +31,16 @@ export async function startHttpTransport(
 /**
  * Handle a single MCP HTTP request. Exported so serverless hosts (Vercel Node Functions, etc.)
  * can call this directly without spinning up a long-lived http.Server.
+ *
+ * `parsedBody` is for hosts that consume the request stream before invoking the handler
+ * (Vercel auto-parses application/json into req.body). Pass it through so the transport
+ * doesn't hang waiting for bytes that already left.
  */
 export async function handleMcpRequest(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   buildServer: () => McpServer,
+  parsedBody?: unknown,
 ): Promise<void> {
   const server = buildServer();
   const transport = new StreamableHTTPServerTransport({
@@ -49,5 +54,5 @@ export async function handleMcpRequest(
   });
 
   await server.connect(transport);
-  await transport.handleRequest(req, res);
+  await transport.handleRequest(req, res, parsedBody);
 }

@@ -6,9 +6,13 @@ export const config = {
   maxDuration: 300,
 };
 
-export default async function handler(req: IncomingMessage, res: ServerResponse): Promise<void> {
+// Vercel auto-parses application/json bodies into req.body and consumes the stream,
+// so we forward the pre-parsed body to the MCP transport — otherwise it waits forever.
+type VercelReq = IncomingMessage & { body?: unknown };
+
+export default async function handler(req: VercelReq, res: ServerResponse): Promise<void> {
   try {
-    await handleMcpRequest(req, res, buildServer);
+    await handleMcpRequest(req, res, buildServer, req.body);
   } catch (err) {
     process.stderr.write(`petri-mcp http error: ${(err as Error).message}\n`);
     if (!res.headersSent) {
