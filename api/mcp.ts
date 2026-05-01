@@ -17,7 +17,7 @@ type VercelReq = IncomingMessage & { body?: unknown };
 // open until Vercel's 300s maxDuration also fails (every request becomes a paid
 // timeout). Compromise: respond with a valid empty SSE stream that emits a
 // single keepalive comment and closes after 25s, well under Vercel's limit.
-const SSE_HOLD_MS = 25_000;
+const SSE_HOLD_MS = 270_000;
 
 function handleSseGet(res: ServerResponse): Promise<void> {
   res.statusCode = 200;
