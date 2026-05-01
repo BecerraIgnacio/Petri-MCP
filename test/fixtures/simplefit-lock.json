@@ -1,0 +1,188 @@
+{
+  "status": "ok",
+  "brand_name": "SimpleFit",
+  "logo": {
+    "type": "wordmark",
+    "value": "SimpleFit",
+    "selector": ".logo",
+    "evidence": {
+      "file": "index.html",
+      "line": 457,
+      "match": "<a href=\"#\" class=\"logo\">Simple<span>Fit</span></a>"
+    },
+    "confidence": 1
+  },
+  "key_phrases": [
+    {
+      "text": "Get Fit in 20 Minutes a Day",
+      "kind": "tagline",
+      "selector": "title, h1",
+      "evidence": {
+        "file": "index.html",
+        "line": 6,
+        "match": "<title>SimpleFit — Get Fit in 20 Minutes a Day</title>"
+      },
+      "confidence": 1
+    },
+    {
+      "text": "AI-powered workout plans and nutrition coaching personalized to your body, your schedule, and your goals",
+      "kind": "headline",
+      "selector": ".hero .sub",
+      "evidence": {
+        "file": "index.html",
+        "line": 466,
+        "match": "AI-powered workout plans and nutrition coaching personalized to your body, your schedule, and your goals. No gym required."
+      },
+      "confidence": 0.9
+    }
+  ],
+  "palette": [
+    {
+      "role": "primary",
+      "hex": "#22c55e",
+      "css_variable": "--green",
+      "evidence": {
+        "file": "index.html",
+        "line": 11,
+        "match": "--green: #22c55e;"
+      },
+      "confidence": 1
+    },
+    {
+      "role": "accent",
+      "hex": "#16a34a",
+      "css_variable": "--green-hover",
+      "evidence": {
+        "file": "index.html",
+        "line": 12,
+        "match": "--green-hover: #16a34a;"
+      },
+      "confidence": 1
+    },
+    {
+      "role": "neutral_text",
+      "hex": "#1a1a1a",
+      "css_variable": "--text",
+      "evidence": {
+        "file": "index.html",
+        "line": 13,
+        "match": "--text: #1a1a1a;"
+      },
+      "confidence": 1
+    },
+    {
+      "role": "neutral_text",
+      "hex": "#6b7280",
+      "css_variable": "--text-muted",
+      "evidence": {
+        "file": "index.html",
+        "line": 14,
+        "match": "--text-muted: #6b7280;"
+      },
+      "confidence": 1
+    },
+    {
+      "role": "neutral_bg",
+      "hex": "#ffffff",
+      "css_variable": "--bg",
+      "evidence": {
+        "file": "index.html",
+        "line": 15,
+        "match": "--bg: #ffffff;"
+      },
+      "confidence": 1
+    },
+    {
+      "role": "border",
+      "hex": "#e5e7eb",
+      "css_variable": "--border",
+      "evidence": {
+        "file": "index.html",
+        "line": 16,
+        "match": "--border: #e5e7eb;"
+      },
+      "confidence": 1
+    }
+  ],
+  "fonts": [
+    {
+      "role": "body",
+      "stack": "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+      "evidence": {
+        "file": "index.html",
+        "line": 23,
+        "match": "font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;"
+      },
+      "confidence": 1
+    }
+  ],
+  "voice": {
+    "tone": [
+      "confident",
+      "practical",
+      "supportive",
+      "efficiency-focused"
+    ],
+    "vocabulary_signals": [
+      "AI-powered",
+      "personalized",
+      "tailored",
+      "smart",
+      "adaptive",
+      "effortless",
+      "no guesswork",
+      "game changer"
+    ],
+    "forbidden_drift": [
+      "overly technical jargon",
+      "complex fitness terminology",
+      "intimidating language",
+      "gym-centric messaging"
+    ]
+  },
+  "locked_selectors": [
+    {
+      "selector": ":root",
+      "scope": "index.html",
+      "property": "--green",
+      "reason": "Primary brand color - appears in logo, buttons, icons, and throughout UI"
+    },
+    {
+      "selector": ":root",
+      "scope": "index.html",
+      "property": "--green-hover",
+      "reason": "Accent color for interactive states - maintains brand consistency"
+    },
+    {
+      "selector": ".logo",
+      "scope": "index.html",
+      "property": "text-content",
+      "reason": "Brand wordmark - SimpleFit with green accent on 'Fit'"
+    },
+    {
+      "selector": "title",
+      "scope": "index.html",
+      "property": "text-content",
+      "reason": "Brand tagline 'Get Fit in 20 Minutes a Day' appears in browser tab"
+    },
+    {
+      "selector": "h1",
+      "scope": "index.html",
+      "property": "text-content",
+      "reason": "Main hero headline - core brand promise"
+    },
+    {
+      "selector": "body",
+      "scope": "index.html",
+      "property": "font-family",
+      "reason": "System font stack maintains clean, accessible brand aesthetic"
+    },
+    {
+      "selector": ".section-label",
+      "scope": "index.html",
+      "property": "color",
+      "reason": "Section labels use primary green color for brand consistency"
+    }
+  ],
+  "notes": "SimpleFit is a fitness brand focused on busy professionals, emphasizing AI-powered personalization and time efficiency. The brand uses a clean, modern aesthetic with green as the primary color representing health and vitality. The voice is practical and supportive, avoiding intimidating fitness jargon while emphasizing smart technology and personalization."
+}

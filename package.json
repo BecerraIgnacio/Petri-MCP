@@ -1,0 +1,38 @@
+{
+  "name": "petri-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for v0 — 90/10 traffic-split website evolution with vibe-keeper + UX/UI evolver agents.",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "petri-mcp": "dist/server.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/server.ts",
+    "dev:http": "PETRI_TRANSPORT=http tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "start:http": "PETRI_TRANSPORT=http node dist/server.js",
+    "agent:vibe": "tsx scripts/run-vibe.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "cheerio": "^1.2.0",
+    "dotenv": "^16.4.5",
+    "glob": "^11.0.0",
+    "openai": "^4.73.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  }
+}

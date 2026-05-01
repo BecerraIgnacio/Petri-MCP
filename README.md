@@ -18,6 +18,15 @@ You build a website on **v0**. You like the result. You install **petri-mcp**. F
 ## Stack
 _(language, framework, key deps — TBD)_
 
+## MCP tool inputs
+
+Both `vibe_identifier` and `ux_ui_evolver` accept either a local path or a public GitHub URL. Provide **exactly one** of:
+
+- `projectRoot` — absolute path to a project directory on the host filesystem (local dev / stdio mode).
+- `repoUrl` — `https://github.com/<owner>/<repo>` for a public repo. Optional `repoRef` selects a branch or tag; defaults to the repo's default branch. petri-mcp shallow-clones the repo to a `/tmp/petri-cache/<owner>-<repo>-<ref>/` directory on first call and reuses the cache on subsequent calls.
+
+Private-repo authentication (PAT) is plumbed in the constructor but not yet exposed at the tool level — Phase 1 ships public-repo support.
+
 ## Running locally
 ```bash
 # fill in once runnable
