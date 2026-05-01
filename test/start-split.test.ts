@@ -154,4 +154,104 @@ describe("runStartSplit", () => {
     expect(saved.runId).toMatch(/^[a-z0-9][a-z0-9-]{0,59}$/);
     expect(saved.variantIds.length).toBeGreaterThan(0);
   });
+
+  it("injects the reporter snippet into .html files by default", async () => {
+    const captured: Array<{ variantId: string; html: string }> = [];
+    const publish = async (args: { runId: string; variantId: string; files: Array<{ path: string; content: string }> }) => {
+      const html = args.files[0]?.content ?? "";
+      captured.push({ variantId: args.variantId, html });
+      return {
+        urls: [`https://test.public.blob.vercel-storage.com/variants/${args.runId}/${args.variantId}/index.html`],
+        blobBase: "https://test.public.blob.vercel-storage.com",
+      };
+    };
+    const save = makeSaveStub();
+    const result = await runStartSplit(
+      {
+        runId: "demo-006",
+        championVariantId: "v0",
+        splitRatio: 90,
+        variants: [
+          { id: "v0", files: HTML_FILES },
+          { id: "v1", files: HTML_FILES },
+        ],
+      },
+      "https://petri-mcp.vercel.app",
+      { publish, saveMeta: save.saveMeta },
+    );
+    expect(result.reporterInjected).toBe(true);
+    expect(captured).toHaveLength(2);
+    for (const c of captured) {
+      expect(c.html).toContain('data-petri="reporter"');
+      expect(c.html).toContain(`data-run="demo-006"`);
+      expect(c.html).toContain(`data-variant="${c.variantId}"`);
+      expect(c.html).toContain('data-endpoint="https://petri-mcp.vercel.app/api/events"');
+    }
+  });
+
+  it("skips reporter injection when injectReporter: false", async () => {
+    const captured: string[] = [];
+    const publish = async (args: { runId: string; variantId: string; files: Array<{ path: string; content: string }> }) => {
+      captured.push(args.files[0]?.content ?? "");
+      return {
+        urls: ["https://x"],
+        blobBase: "https://test.public.blob.vercel-storage.com",
+      };
+    };
+    const save = makeSaveStub();
+    const result = await runStartSplit(
+      {
+        runId: "demo-007",
+        championVariantId: "v0",
+        splitRatio: 90,
+        injectReporter: false,
+        variants: [
+          { id: "v0", files: HTML_FILES },
+          { id: "v1", files: HTML_FILES },
+        ],
+      },
+      "https://petri-mcp.vercel.app",
+      { publish, saveMeta: save.saveMeta },
+    );
+    expect(result.reporterInjected).toBe(false);
+    for (const html of captured) expect(html).not.toContain("data-petri");
+  });
+
+  it("does not modify non-HTML files", async () => {
+    const captured: Array<{ path: string; content: string }> = [];
+    const publish = async (args: { runId: string; variantId: string; files: Array<{ path: string; content: string }> }) => {
+      for (const f of args.files) captured.push({ path: f.path, content: f.content });
+      return {
+        urls: args.files.map(() => "https://x"),
+        blobBase: "https://test.public.blob.vercel-storage.com",
+      };
+    };
+    const save = makeSaveStub();
+    await runStartSplit(
+      {
+        runId: "demo-008",
+        championVariantId: "v0",
+        splitRatio: 90,
+        variants: [
+          {
+            id: "v0",
+            files: [
+              { path: "index.html", content: "<html><head></head></html>" },
+              { path: "style.css", content: "body { color: red; }" },
+              { path: "logo.svg", content: "<svg></svg>" },
+            ],
+          },
+          { id: "v1", files: HTML_FILES },
+        ],
+      },
+      "https://petri-mcp.vercel.app",
+      { publish, saveMeta: save.saveMeta },
+    );
+    const css = captured.find((c) => c.path === "style.css")!;
+    const svg = captured.find((c) => c.path === "logo.svg")!;
+    expect(css.content).toBe("body { color: red; }");
+    expect(svg.content).toBe("<svg></svg>");
+    const html = captured.find((c) => c.path === "index.html")!;
+    expect(html.content).toContain("data-petri");
+  });
 });

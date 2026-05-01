@@ -14,6 +14,29 @@ export type RunMeta = z.infer<typeof RunMeta>;
 
 export const RUN_META_KEY = (runId: string): string => `petri:run:${runId}:meta`;
 
+export const EventRecord = z.object({
+  run_id: z.string().regex(/^[a-z0-9][a-z0-9-]{0,59}$/),
+  variant_id: z.string().min(1).max(120),
+  session_id: z.string().min(1).max(120),
+  event_name: z.string().min(1).max(60),
+  payload: z.record(z.unknown()).optional(),
+  ts: z.number().int().nonnegative(),
+});
+
+export type EventRecord = z.infer<typeof EventRecord>;
+
+export const StoredEvent = EventRecord.extend({
+  event_id: z.string().min(1),
+  received_at: z.number().int().nonnegative(),
+});
+
+export type StoredEvent = z.infer<typeof StoredEvent>;
+
+export const EVENTS_KEY = (runId: string, variantId: string): string =>
+  `petri:run:${runId}:variant:${variantId}:events`;
+
+export const MAX_EVENTS_PER_VARIANT = 10_000;
+
 export function pickBucket(meta: RunMeta, rng: () => number = Math.random): string {
   const roll = Math.floor(rng() * 100);
   if (roll < meta.splitRatio) return meta.championVariantId;

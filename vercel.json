@@ -6,6 +6,9 @@
   "functions": {
     "api/mcp.ts": {
       "maxDuration": 300
+    },
+    "api/events.ts": {
+      "maxDuration": 10
     }
   }
 }

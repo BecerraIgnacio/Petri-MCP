@@ -1,6 +1,7 @@
 import { publishVariantFiles, type PublishFile } from "./publish.js";
 import { setRunMeta } from "./run-store.js";
 import type { RunMeta } from "./run-meta.js";
+import { injectReporter, isHtmlPath } from "./inject-reporter.js";
 
 export interface StartSplitVariantInput {
   id: string;
@@ -12,6 +13,7 @@ export interface StartSplitInput {
   championVariantId: string;
   splitRatio: number;
   variants: StartSplitVariantInput[];
+  injectReporter?: boolean;
 }
 
 export interface StartSplitResult {
@@ -23,6 +25,7 @@ export interface StartSplitResult {
   splitRatio: number;
   blobBase: string;
   files: Record<string, string[]>;
+  reporterInjected: boolean;
 }
 
 export interface StartSplitDeps {
@@ -50,14 +53,29 @@ export async function runStartSplit(
     );
   }
 
+  const trimmedBase = publicBase.replace(/\/+$/, "");
+  const reporterEnabled = input.injectReporter !== false;
+  const reporterEndpoint = `${trimmedBase}/api/events`;
+
   let blobBase = "";
   const files: Record<string, string[]> = {};
   for (const variant of input.variants) {
-    const publishFiles: PublishFile[] = variant.files.map((f) => ({
-      path: f.path,
-      content: f.content,
-      ...(f.contentType ? { contentType: f.contentType } : {}),
-    }));
+    const publishFiles: PublishFile[] = variant.files.map((f) => {
+      const content =
+        reporterEnabled && isHtmlPath(f.path)
+          ? injectReporter({
+              html: f.content,
+              runId: input.runId,
+              variantId: variant.id,
+              endpoint: reporterEndpoint,
+            })
+          : f.content;
+      return {
+        path: f.path,
+        content,
+        ...(f.contentType ? { contentType: f.contentType } : {}),
+      };
+    });
     const result = await publish({
       runId: input.runId,
       variantId: variant.id,
@@ -78,7 +96,6 @@ export async function runStartSplit(
   };
   await saveMeta(meta);
 
-  const trimmedBase = publicBase.replace(/\/+$/, "");
   return {
     status: "ok",
     runId: input.runId,
@@ -88,5 +105,6 @@ export async function runStartSplit(
     splitRatio: input.splitRatio,
     blobBase,
     files,
+    reporterInjected: reporterEnabled,
   };
 }

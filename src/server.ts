@@ -10,6 +10,7 @@ import { VibeIdentifierOk } from "./agents/vibe-identifier/schema.js";
 import { LocalFileSource, type FileSource } from "./shared/file-source.js";
 import { GitHubFileSource } from "./shared/sources/github.js";
 import { runStartSplit } from "./shared/start-split.js";
+import { runReadMetrics } from "./shared/events.js";
 import { startHttpTransport } from "./transports/http.js";
 
 const PETRI_PUBLIC_BASE =
@@ -222,6 +223,49 @@ export function buildServer(): McpServer {
         },
         PETRI_PUBLIC_BASE,
       );
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result, null, 2),
+          },
+        ],
+        structuredContent: { ...result } as Record<string, unknown>,
+      };
+    },
+  );
+
+  server.registerTool(
+    "read_metrics",
+    {
+      title: "Read variant metrics",
+      description:
+        "Aggregate event counts per variant for a given run, plus a sample of recent events. Powered by the reporter snippet that start_split injects into every variant's <head>.",
+      inputSchema: {
+        runId: z
+          .string()
+          .regex(/^[a-z0-9][a-z0-9-]{0,59}$/)
+          .describe("The runId previously registered via start_split."),
+        variantId: z
+          .string()
+          .min(1)
+          .optional()
+          .describe("Restrict to a single variant. Omit to aggregate across all variants."),
+        sample: z
+          .number()
+          .int()
+          .min(0)
+          .max(500)
+          .default(50)
+          .describe("How many recent events to sample per variant (for breakdown + uniqueSessions). 0 disables sampling."),
+      },
+    },
+    async (args) => {
+      const result = await runReadMetrics({
+        runId: args.runId,
+        ...(args.variantId ? { variantId: args.variantId } : {}),
+        sample: args.sample ?? 50,
+      });
       return {
         content: [
           {
