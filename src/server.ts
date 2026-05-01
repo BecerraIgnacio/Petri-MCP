@@ -9,7 +9,11 @@ import { runUxUiEvolver } from "./agents/ux-ui-evolver/index.js";
 import { VibeIdentifierOk } from "./agents/vibe-identifier/schema.js";
 import { LocalFileSource, type FileSource } from "./shared/file-source.js";
 import { GitHubFileSource } from "./shared/sources/github.js";
+import { runStartSplit } from "./shared/start-split.js";
 import { startHttpTransport } from "./transports/http.js";
+
+const PETRI_PUBLIC_BASE =
+  process.env.PETRI_PUBLIC_BASE ?? "https://petri-mcp.vercel.app";
 
 interface SourceInput {
   projectRoot?: string;
@@ -150,6 +154,82 @@ export function buildServer(): McpServer {
           },
         ],
         structuredContent: result,
+      };
+    },
+  );
+
+  server.registerTool(
+    "start_split",
+    {
+      title: "Start traffic split",
+      description:
+        "Publish a champion + N variants to petri-hosted Vercel Blob and register a sticky-bucket split (default 90/10). Returns a public petri URL that serves the right bucket per visitor via the petri_variant cookie. Each variant ships its own file set; one of them must be the champion.",
+      inputSchema: {
+        runId: z
+          .string()
+          .regex(/^[a-z0-9][a-z0-9-]{0,59}$/)
+          .describe("kebab-case identifier, ≤60 chars. Used in URLs and KV keys."),
+        championVariantId: z
+          .string()
+          .min(1)
+          .describe("ID of the variant in `variants` that should serve as champion (≈splitRatio% of traffic)."),
+        splitRatio: z
+          .number()
+          .int()
+          .min(0)
+          .max(100)
+          .default(90)
+          .describe("Percent of traffic served the champion. Default 90."),
+        variants: z
+          .array(
+            z.object({
+              id: z
+                .string()
+                .min(1)
+                .describe("Variant id. Conventionally `v0`/`champion` for the champion and `v1`,`v2`,… for challengers."),
+              files: z
+                .array(
+                  z.object({
+                    path: z
+                      .string()
+                      .min(1)
+                      .describe("Relative path inside the variant, e.g. `index.html`."),
+                    content: z.string(),
+                    contentType: z.string().optional(),
+                  }),
+                )
+                .min(1),
+            }),
+          )
+          .min(2)
+          .describe("Champion + ≥1 challenger. Each variant carries its own files."),
+      },
+    },
+    async (args) => {
+      const result = await runStartSplit(
+        {
+          runId: args.runId,
+          championVariantId: args.championVariantId,
+          splitRatio: args.splitRatio ?? 90,
+          variants: args.variants.map((v) => ({
+            id: v.id,
+            files: v.files.map((f) => ({
+              path: f.path,
+              content: f.content,
+              ...(f.contentType ? { contentType: f.contentType } : {}),
+            })),
+          })),
+        },
+        PETRI_PUBLIC_BASE,
+      );
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result, null, 2),
+          },
+        ],
+        structuredContent: { ...result } as Record<string, unknown>,
       };
     },
   );

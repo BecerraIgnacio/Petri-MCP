@@ -27,6 +27,49 @@ Both `vibe_identifier` and `ux_ui_evolver` accept either a local path or a publi
 
 Private-repo authentication (PAT) is plumbed in the constructor but not yet exposed at the tool level — Phase 1 ships public-repo support.
 
+## Hosting variants behind a 90/10 traffic split (Phase 3)
+
+Once the evolver has produced a champion + N variants, call the `start_split` MCP tool to publish them and register a sticky-bucket split:
+
+```json
+{
+  "runId": "simplefit-001",
+  "championVariantId": "v0",
+  "splitRatio": 90,
+  "variants": [
+    { "id": "v0", "files": [{ "path": "index.html", "content": "<!doctype html>…" }] },
+    { "id": "v1", "files": [{ "path": "index.html", "content": "<!doctype html>…" }] }
+  ]
+}
+```
+
+This uploads each variant's files to Vercel Blob under `variants/<runId>/<variantId>/<path>`, writes a run-meta record to Upstash Redis (`petri:run:<runId>:meta`), and returns a public URL of the form `https://petri-mcp.vercel.app/p/<runId>/`.
+
+Edge middleware at that URL:
+1. Reads the `petri_variant` cookie.
+2. If absent, rolls 0–99: a roll under `splitRatio` serves the champion; a roll at or above it picks a challenger uniformly. The chosen variant id is set as the cookie (path-scoped to `/p/<runId>`, 30-day max-age).
+3. Proxies the request to the corresponding Blob path.
+
+Sticky bucketing means each visitor stays in the same variant on subsequent visits. Verify with curl:
+
+```bash
+# First request: cookie set in the response.
+curl -i https://petri-mcp.vercel.app/p/simplefit-001/index.html
+# Replay with the cookie: same variant every time.
+curl -b "petri_variant=v1" https://petri-mcp.vercel.app/p/simplefit-001/index.html
+# Run the smoke harness against any deployment.
+npm run smoke:split -- --url https://petri-mcp.vercel.app
+```
+
+### Required marketplace integrations
+
+The deployed petri-mcp project needs two Vercel Marketplace integrations enabled:
+
+1. **Vercel Blob** — injects `BLOB_READ_WRITE_TOKEN`.
+2. **Upstash Redis** (Marketplace integration) — injects `KV_REST_API_URL` + `KV_REST_API_TOKEN`. Local dev can substitute `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` from a free-tier Upstash account.
+
+After provisioning, run `vercel env pull .env` to land the tokens locally.
+
 ## Running locally
 ```bash
 # fill in once runnable
