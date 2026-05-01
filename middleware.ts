@@ -41,6 +41,9 @@ export default async function middleware(req: Request): Promise<Response> {
   const blobRes = await fetch(target);
 
   const headers = new Headers(blobRes.headers);
+  // Vercel Blob serves files with Content-Disposition: attachment by default,
+  // which forces a download even for HTML. Strip it so the browser renders inline.
+  headers.delete("content-disposition");
   headers.set("x-petri-variant", chosen);
   headers.set("x-petri-run", runId);
   if (setCookie) {
