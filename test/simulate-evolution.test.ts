@@ -144,7 +144,7 @@ describe("runSimulateEvolution", () => {
     }
   });
 
-  it("tags outcomes correctly (promoted / abandoned / current_champion)", async () => {
+  it("tags outcomes correctly (promoted / abandoned / current_champion / previous_champion)", async () => {
     const result = await runSimulateEvolution(
       {
         source: new LocalFileSource(SIMPLEFIT_ROOT),
@@ -180,7 +180,9 @@ describe("runSimulateEvolution", () => {
     );
 
     const byId = new Map(result.lineage.map((e) => [e.id, e]));
-    expect(byId.get("v0")!.outcome).toBe("abandoned"); // demoted on gen 1
+    // v0 was champion in gen 1 then demoted by v3 — it belongs in the winning
+    // lineage chain, not lumped with abandoned siblings.
+    expect(byId.get("v0")!.outcome).toBe("previous_champion");
     expect(byId.get("v3")!.outcome).toBe("current_champion"); // promoted gen 1, held gen 2
     expect(byId.get("v1")!.outcome).toBe("abandoned");
     expect(byId.get("v2")!.outcome).toBe("abandoned");
@@ -188,6 +190,51 @@ describe("runSimulateEvolution", () => {
     expect(byId.get("v5")!.outcome).toBe("abandoned");
     expect(byId.get("v6")!.outcome).toBe("abandoned");
     expect(result.winner).toBe("v3");
+  });
+
+  it("preserves challenger-gen stats when a variant becomes champion (championRuns is append-only)", async () => {
+    const result = await runSimulateEvolution(
+      {
+        source: new LocalFileSource(SIMPLEFIT_ROOT),
+        displayName: "simplefit-sim",
+        generations: 2,
+        sessionsPerGen: 1000,
+        nVariants: 3,
+        splitRatio: 90,
+        seed: 13,
+        lockManifest: lock,
+        targetMetric: { name: "x", description: "y", direction: "increase" },
+      },
+      {
+        evolver: makeEvolverStub([
+          [
+            { id: "v1", hypothesis: "a", mutations: [TEXT_MUTATION("index.html", ".hero-cta", "A")] },
+            { id: "v2", hypothesis: "b", mutations: [TEXT_MUTATION("index.html", ".hero-cta", "B")] },
+            { id: "v3", hypothesis: "c", mutations: [TEXT_MUTATION("index.html", ".hero-cta", "C")] },
+          ],
+          [
+            { id: "v1", hypothesis: "d", mutations: [TEXT_MUTATION("index.html", ".hero-cta", "D")] },
+            { id: "v2", hypothesis: "e", mutations: [TEXT_MUTATION("index.html", ".hero-cta", "E")] },
+            { id: "v3", hypothesis: "f", mutations: [TEXT_MUTATION("index.html", ".hero-cta", "F")] },
+          ],
+        ]),
+        scorer: makeScorerStub([
+          // Gen 1: v2 wins (the small-sample challenger we want to track)
+          { v0: 0.2, v1: 0.3, v2: 0.7, v3: 0.4 },
+          // Gen 2: v2 holds
+          { v2: 0.8, v4: 0.4, v5: 0.5, v6: 0.6 },
+        ]),
+      },
+    );
+    const v2 = result.lineage.find((e) => e.id === "v2")!;
+    // v2's primary sessions/conversions reflect its CHALLENGER appearance in gen 1
+    // (small sample, ~1/(nVariants+champ-share) of 1000), not its gen-2 champion run.
+    expect(v2.sessions).toBeLessThan(100);
+    expect(v2.championRuns).toBeDefined();
+    expect(v2.championRuns!).toHaveLength(1);
+    expect(v2.championRuns![0]!.generation).toBe(2);
+    // Champion run gets the lion's share (90/10 of 1000).
+    expect(v2.championRuns![0]!.sessions).toBeGreaterThan(800);
   });
 
   it("is deterministic for a fixed seed (lineage IDs + intrinsic rates byte-identical)", async () => {

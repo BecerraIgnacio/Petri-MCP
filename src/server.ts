@@ -9,11 +9,12 @@ import { runUxUiEvolver } from "./agents/ux-ui-evolver/index.js";
 import { VibeIdentifierOk } from "./agents/vibe-identifier/schema.js";
 import { LocalFileSource, type FileSource } from "./shared/file-source.js";
 import { GitHubFileSource } from "./shared/sources/github.js";
+import { LiveSiteSource } from "./shared/sources/live-site.js";
 import { runStartSplit } from "./shared/start-split.js";
 import { runReadMetrics } from "./shared/events.js";
 import { runScoreGeneration } from "./shared/score-generation.js";
 import { runEvolveNext } from "./shared/evolve-next.js";
-import { runSimulateEvolution } from "./shared/simulate-evolution.js";
+import { runConnectSite } from "./shared/connect-site.js";
 import { startHttpTransport } from "./transports/http.js";
 
 const PETRI_PUBLIC_BASE =
@@ -23,6 +24,7 @@ interface SourceInput {
   projectRoot?: string;
   repoUrl?: string;
   repoRef?: string;
+  liveUrl?: string;
 }
 
 interface BuiltSource {
@@ -31,6 +33,10 @@ interface BuiltSource {
 }
 
 function buildSource(input: SourceInput): BuiltSource {
+  if (input.liveUrl) {
+    const source = new LiveSiteSource({ url: input.liveUrl });
+    return { source, displayName: source.displayName() };
+  }
   if (input.projectRoot) {
     const root = path.resolve(input.projectRoot);
     return { source: new LocalFileSource(root), displayName: root };
@@ -39,13 +45,13 @@ function buildSource(input: SourceInput): BuiltSource {
     const source = new GitHubFileSource({ repoUrl: input.repoUrl, ref: input.repoRef });
     return { source, displayName: source.displayName() };
   }
-  throw new Error("buildSource: expected projectRoot or repoUrl");
+  throw new Error("buildSource: expected one of liveUrl, projectRoot, or repoUrl");
 }
 
-function assertExactlyOneSource(v: { projectRoot?: string; repoUrl?: string }): void {
-  const provided = (v.projectRoot ? 1 : 0) + (v.repoUrl ? 1 : 0);
+function assertExactlyOneSource(v: SourceInput): void {
+  const provided = (v.projectRoot ? 1 : 0) + (v.repoUrl ? 1 : 0) + (v.liveUrl ? 1 : 0);
   if (provided !== 1) {
-    throw new Error("provide exactly one of projectRoot or repoUrl");
+    throw new Error("provide exactly one of liveUrl, projectRoot, or repoUrl");
   }
 }
 
@@ -66,6 +72,14 @@ const repoRefField = z
   .optional()
   .describe("Optional git branch or tag. Defaults to the repo's default branch.");
 
+const liveUrlField = z
+  .string()
+  .url()
+  .optional()
+  .describe(
+    "Public URL of a deployed page (typically a v0 site on Vercel). petri fetches the rendered HTML and treats it as a single virtual `index.html` for evolution. Use this for v0/Next.js projects — repoUrl alone won't work because the source is .tsx, not HTML.",
+  );
+
 export function buildServer(): McpServer {
   const server = new McpServer({
     name: "petri-mcp",
@@ -82,6 +96,7 @@ export function buildServer(): McpServer {
         projectRoot: projectRootField,
         repoUrl: repoUrlField,
         repoRef: repoRefField,
+        liveUrl: liveUrlField,
         hints: z
           .object({
             brand_name: z.string().optional(),
@@ -96,7 +111,7 @@ export function buildServer(): McpServer {
     async (args) => {
       assertExactlyOneSource(args);
       const { source, displayName } = buildSource(args);
-      if (source instanceof GitHubFileSource) await source.ensureReady();
+      if (source instanceof GitHubFileSource || source instanceof LiveSiteSource) await source.ensureReady();
       const result = await runVibeIdentifier({ source, displayName, hints: args.hints });
       return {
         content: [
@@ -120,6 +135,7 @@ export function buildServer(): McpServer {
         projectRoot: projectRootField,
         repoUrl: repoUrlField,
         repoRef: repoRefField,
+        liveUrl: liveUrlField,
         lockManifest: VibeIdentifierOk.describe(
           "The full Vibe Identifier output (status: 'ok' variant) for this project.",
         ),
@@ -143,7 +159,7 @@ export function buildServer(): McpServer {
     async (args) => {
       assertExactlyOneSource(args);
       const { source, displayName } = buildSource(args);
-      if (source instanceof GitHubFileSource) await source.ensureReady();
+      if (source instanceof GitHubFileSource || source instanceof LiveSiteSource) await source.ensureReady();
       const result = await runUxUiEvolver({
         source,
         displayName,
@@ -399,77 +415,103 @@ export function buildServer(): McpServer {
   );
 
   server.registerTool(
-    "simulate_evolution",
+    "connect_site",
     {
-      title: "Simulate evolution end-to-end",
+      title: "Connect a site to petri",
       description:
-        "Run the full vibe → evolver → score → promote loop in-process against a project, with synthetic users instead of real traffic. Each variant is assigned its own intrinsic conversion rate (champion drawn from Uniform(0.10, 0.30); challengers drawn from Normal(parent_rate, 0.05)); 1000 fake sessions per generation are split 90/10 between champion and challengers; the scorer reads the synthetic events and promotes when a challenger strictly beats the champion. Returns a phylogenetic lineage of every variant ever generated — winners, losers, abandoned branches.",
+        "Register a site (GitHub repo, deployed v0 URL, or local path) with petri-mcp and return a control panel URL. This is the cheap, no-LLM entry point: it mints a runId, persists the site identifier to KV, and hands back a clickable URL where the user can run a simulation or kick off real evolution. Pass repoUrl for a static-HTML GitHub repo, liveUrl for a deployed v0/Next.js site (petri fetches the rendered HTML), or projectRoot for local development.",
       inputSchema: {
         projectRoot: projectRootField,
         repoUrl: repoUrlField,
         repoRef: repoRefField,
-        generations: z
-          .number()
-          .int()
-          .min(1)
-          .max(10)
-          .default(3)
-          .describe("How many generations to evolve. Default 3."),
-        sessionsPerGen: z
-          .number()
-          .int()
-          .min(50)
-          .max(20_000)
-          .default(1000)
-          .describe("Synthetic sessions per generation. Default 1000."),
-        nVariants: z
-          .number()
-          .int()
-          .min(1)
-          .max(5)
-          .default(3)
-          .describe("Challengers produced per generation. 1–5; default 3."),
-        splitRatio: z
-          .number()
-          .int()
-          .min(0)
-          .max(100)
-          .default(90)
-          .describe("Percent of synthetic traffic served the champion each generation. Default 90."),
-        seed: z
-          .number()
-          .int()
-          .min(0)
-          .optional()
-          .describe("Seed for reproducible simulations. Omit for a fresh run each call."),
-        renderToDir: z
+        liveUrl: liveUrlField,
+        name: z
           .string()
+          .regex(/^[a-z0-9][a-z0-9-]{0,59}$/)
           .optional()
-          .describe("Optional absolute directory path. When set, every variant of every generation is rendered to <renderToDir>/gen<n>/<vid>/<path> so judges can open the HTML."),
+          .describe(
+            "Optional kebab-case slug (≤60 chars) used as both the runId and the URL path component. If omitted, petri generates one like `petri-a3k9pw`.",
+          ),
       },
     },
     async (args) => {
-      assertExactlyOneSource(args);
-      const { source, displayName } = buildSource(args);
-      if (source instanceof GitHubFileSource) await source.ensureReady();
-      const result = await runSimulateEvolution({
-        source,
-        displayName,
-        generations: args.generations,
-        sessionsPerGen: args.sessionsPerGen,
-        nVariants: args.nVariants,
-        splitRatio: args.splitRatio,
-        ...(args.seed !== undefined ? { seed: args.seed } : {}),
-        ...(args.renderToDir ? { renderToDir: args.renderToDir } : {}),
-      });
+      const result = await runConnectSite(
+        {
+          ...(args.projectRoot ? { projectRoot: args.projectRoot } : {}),
+          ...(args.repoUrl ? { repoUrl: args.repoUrl } : {}),
+          ...(args.repoRef ? { repoRef: args.repoRef } : {}),
+          ...(args.liveUrl ? { liveUrl: args.liveUrl } : {}),
+          ...(args.name ? { name: args.name } : {}),
+        },
+        PETRI_PUBLIC_BASE,
+      );
+      // Inline the URL in the text content so MCP clients that hide
+      // structured content still surface it to the user.
+      const text = [
+        `Connected. Open the control panel:`,
+        result.controlPanelUrl,
+        ``,
+        JSON.stringify(result, null, 2),
+      ].join("\n");
       return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(result, null, 2),
-          },
-        ],
+        content: [{ type: "text", text }],
         structuredContent: { ...result } as Record<string, unknown>,
+      };
+    },
+  );
+
+  server.registerTool(
+    "start_petri",
+    {
+      title: "Start a real petri evolution run",
+      description:
+        "Kick off a real-traffic 90/10 evolution loop on a previously-connected site. Currently gated: requires the Vercel Blob and Upstash Redis Marketplace integrations to be provisioned on the petri-mcp project. Until then, this tool returns a clear gated message with the control panel URL — where the user can run a deterministic simulation instead.",
+      inputSchema: {
+        runId: z
+          .string()
+          .regex(/^[a-z0-9][a-z0-9-]{0,59}$/)
+          .describe("The runId returned by connect_site for the target site."),
+        targetMetric: z
+          .string()
+          .min(1)
+          .optional()
+          .describe(
+            "Free-text description of what to optimize for, e.g. 'time on site', 'sign-up conversion', 'scroll depth'. Parsed when the gate lifts.",
+          ),
+        sessionTarget: z
+          .number()
+          .int()
+          .min(50)
+          .max(1_000_000)
+          .optional()
+          .describe(
+            "How many real visitor sessions to collect per generation before scoring. Parsed when the gate lifts.",
+          ),
+      },
+    },
+    async (args) => {
+      const base = PETRI_PUBLIC_BASE.replace(/\/+$/, "");
+      const controlPanelUrl = `${base}/r/${args.runId}`;
+      const payload = {
+        status: "gated" as const,
+        runId: args.runId,
+        controlPanelUrl,
+        reason:
+          "Real petri requires the Vercel Blob and Upstash Redis Marketplace integrations to be provisioned on the petri-mcp project. Until they're enabled, real traffic-split evolution is not available.",
+        suggestion:
+          "Open the control panel and click 'Run Simulation' to evolve the site against synthetic users (deterministic, ~4 minutes, no production traffic needed).",
+        requestedTargetMetric: args.targetMetric ?? null,
+        requestedSessionTarget: args.sessionTarget ?? null,
+      };
+      const text = [
+        `Real petri is gated. Open the control panel and run a simulation:`,
+        controlPanelUrl,
+        ``,
+        JSON.stringify(payload, null, 2),
+      ].join("\n");
+      return {
+        content: [{ type: "text", text }],
+        structuredContent: payload as unknown as Record<string, unknown>,
       };
     },
   );

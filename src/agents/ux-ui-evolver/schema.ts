@@ -5,11 +5,29 @@ import { TargetMetric } from "../../shared/run-meta.js";
 
 export { TargetMetric };
 
+/**
+ * One previously-explored axis along the champion lineage chain. The orchestrator
+ * derives these from the chain of `promoted` / `previous_champion` lineage entries
+ * and feeds them in so the evolver can avoid re-running the same kind/selector
+ * three generations in a row (gradient-ascend tunnel vision). It is a *signal*,
+ * not a hard constraint — the evolver may still propose the same kind if it has
+ * the strongest hypothesis.
+ */
+export const PreviousMutation = z.object({
+  generation: z.number().int().min(1),
+  kind: z.string().min(1),
+  selector: z.string().min(1).optional(),
+  property: z.string().min(1).optional(),
+  file: z.string().min(1).optional(),
+});
+export type PreviousMutation = z.infer<typeof PreviousMutation>;
+
 const EvolverInputMeta = z.object({
   displayName: z.string().min(1),
   lockManifest: VibeIdentifierOk,
   targetMetric: TargetMetric.optional(),
   nVariants: z.number().int().min(1).max(5).default(3),
+  previousMutations: z.array(PreviousMutation).optional(),
 });
 
 type TargetMetricType = z.infer<typeof TargetMetric>;
@@ -20,6 +38,7 @@ export interface EvolverInput {
   lockManifest: z.infer<typeof VibeIdentifierOk>;
   targetMetric?: TargetMetricType;
   nVariants: number;
+  previousMutations?: PreviousMutation[];
 }
 
 export function parseEvolverInput(raw: unknown): EvolverInput {
@@ -33,6 +52,7 @@ export function parseEvolverInput(raw: unknown): EvolverInput {
     lockManifest: obj.lockManifest,
     targetMetric: obj.targetMetric,
     nVariants: obj.nVariants,
+    previousMutations: obj.previousMutations,
   });
   return {
     source,
@@ -40,6 +60,9 @@ export function parseEvolverInput(raw: unknown): EvolverInput {
     lockManifest: meta.lockManifest,
     ...(meta.targetMetric ? { targetMetric: meta.targetMetric } : {}),
     nVariants: meta.nVariants,
+    ...(meta.previousMutations && meta.previousMutations.length > 0
+      ? { previousMutations: meta.previousMutations }
+      : {}),
   };
 }
 

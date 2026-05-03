@@ -30,6 +30,10 @@ venv/
 # Vercel
 .vercel/
 
-# Generated demo output
-demo/
-.vercel
+# Generated demo output (one-off explorer dumps from sim runs)
+demo/*
+# ...except the canonical seed-42 explorer used by the landing iframe
+!demo/sim-seed42
+
+# Fonts copied in by scripts/copy-fonts.ts at build time
+public/fonts/

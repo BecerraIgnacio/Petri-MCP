@@ -55,7 +55,13 @@ async function main(): Promise<void> {
   for (const e of result.lineage) {
     const arrow = e.parent ? `${e.parent} → ${e.id}` : `${e.id} (seed)`;
     const tag =
-      e.outcome === "current_champion" ? "🏆" : e.outcome === "promoted" ? "✓" : "·";
+      e.outcome === "current_champion"
+        ? "🏆"
+        : e.outcome === "previous_champion"
+          ? "🥈"
+          : e.outcome === "promoted"
+            ? "✓"
+            : "·";
     console.error(
       `  ${tag} gen${e.generation} ${arrow}  intrinsic=${e.intrinsicRate.toFixed(3)}  observed=${e.observedRate.toFixed(3)} (${e.conversions}/${e.sessions})  [${e.outcome}]`,
     );

@@ -143,3 +143,15 @@ export function applyMutations(html: string, mutations: Mutation[]): ApplyMutati
 export function applyVariant(html: string, variant: Variant): ApplyMutationsResult {
   return applyMutations(html, variant.mutations);
 }
+
+/**
+ * For a mutated copy of a live site that we plan to iframe from a different
+ * origin (e.g. our Blob host), insert `<base href="${origin}">` so that
+ * `_next/static/...` scripts, CSS, fonts, and images resolve against the
+ * original origin rather than 404'ing on the Blob host. If a `<base>` tag
+ * already exists, leave the page alone.
+ */
+export function injectBaseHref(html: string, baseUrl: string): string {
+  if (/<base\b[^>]*>/i.test(html)) return html;
+  return html.replace(/<head\b[^>]*>/i, (m) => `${m}\n  <base href="${baseUrl}">`);
+}

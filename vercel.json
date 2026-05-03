@@ -1,7 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
-  "buildCommand": "tsc -p tsconfig.json",
+  "installCommand": "npm install",
+  "buildCommand": "tsx scripts/copy-fonts.ts && tsc -p tsconfig.json && cp -R public/. dist/ && mkdir -p dist/demo && cp -R demo/. dist/demo/",
   "outputDirectory": "dist",
   "functions": {
     "api/mcp.ts": {
@@ -9,6 +10,20 @@
     },
     "api/events.ts": {
       "maxDuration": 10
+    },
+    "api/simulate.ts": {
+      "maxDuration": 300
+    },
+    "api/dashboard.ts": {
+      "maxDuration": 10
+    },
+    "api/r.ts": {
+      "maxDuration": 10
     }
-  }
+  },
+  "rewrites": [
+    { "source": "/dashboard", "destination": "/api/dashboard" },
+    { "source": "/r/:runId", "destination": "/api/r?runId=:runId" },
+    { "source": "/r/:runId/sim", "destination": "/api/r?runId=:runId&view=sim" }
+  ]
 }

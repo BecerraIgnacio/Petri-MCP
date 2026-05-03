@@ -1,0 +1,411 @@
+{
+  "status": "ok",
+  "simId": "sim-42-moocnzxe",
+  "displayName": "simplefit",
+  "metric": {
+    "name": "primary_cta_clicks",
+    "description": "Sessions where the user clicked the primary CTA in the hero (selector matching .btn-primary). A session counts if any click event with that selector exists.",
+    "direction": "increase"
+  },
+  "config": {
+    "generations": 3,
+    "sessionsPerGen": 1000,
+    "nVariants": 3,
+    "splitRatio": 90,
+    "seed": 42
+  },
+  "generations": [
+    {
+      "generation": 1,
+      "championAtStart": "v0",
+      "variantIds": [
+        "v0",
+        "v1",
+        "v2",
+        "v3"
+      ],
+      "scorerVerdict": [
+        {
+          "variantId": "v0",
+          "score": 0.219,
+          "sessionsCounted": 899,
+          "confidence": 0.9,
+          "reasoning": "197 click events on .btn-primary across 899 unique sessions; assuming each click event maps to one unique session (consistent with the pattern of at most one click per session in the sample), approximately 197/899 ≈ 21.9% of sessions satisfied the metric."
+        },
+        {
+          "variantId": "v1",
+          "score": 0.333,
+          "sessionsCounted": 36,
+          "confidence": 0.55,
+          "reasoning": "12 of 36 sessions had a .btn-primary click event, yielding a 33.3% conversion rate, though the sample size is modest."
+        },
+        {
+          "variantId": "v2",
+          "score": 0.257,
+          "sessionsCounted": 35,
+          "confidence": 0.5,
+          "reasoning": "9 of 35 sessions had a .btn-primary click event, yielding a 25.7% conversion rate, with a small sample size."
+        },
+        {
+          "variantId": "v3",
+          "score": 0.167,
+          "sessionsCounted": 30,
+          "confidence": 0.5,
+          "reasoning": "5 of 30 sessions had a .btn-primary click event, yielding a 16.7% conversion rate, with a small sample size."
+        }
+      ],
+      "promoted": "v1",
+      "promotionReason": "promoted v1"
+    },
+    {
+      "generation": 2,
+      "championAtStart": "v1",
+      "variantIds": [
+        "v1",
+        "v4",
+        "v5",
+        "v6"
+      ],
+      "scorerVerdict": [
+        {
+          "variantId": "v1",
+          "score": 0.276,
+          "sessionsCounted": 888,
+          "confidence": 0.9,
+          "reasoning": "245 click events on .btn-primary across 888 unique sessions; the recent sample shows ~245 sessions with qualifying clicks out of 888 total, yielding approximately 27.6% session-level CTA click rate."
+        },
+        {
+          "variantId": "v4",
+          "score": 0.293,
+          "sessionsCounted": 41,
+          "confidence": 0.55,
+          "reasoning": "12 of 41 unique sessions contained a .btn-primary click event, giving a 29.3% CTA click rate, though the smaller sample reduces confidence."
+        },
+        {
+          "variantId": "v5",
+          "score": 0.3,
+          "sessionsCounted": 40,
+          "confidence": 0.55,
+          "reasoning": "12 of 40 unique sessions contained a .btn-primary click event, yielding a 30% CTA click rate across a modest sample."
+        },
+        {
+          "variantId": "v6",
+          "score": 0.29,
+          "sessionsCounted": 31,
+          "confidence": 0.5,
+          "reasoning": "9 of 31 unique sessions contained a .btn-primary click event, giving approximately 29% CTA click rate, with lower confidence due to the small sample size."
+        }
+      ],
+      "promoted": "v5",
+      "promotionReason": "promoted v5"
+    },
+    {
+      "generation": 3,
+      "championAtStart": "v5",
+      "variantIds": [
+        "v5",
+        "v7",
+        "v8",
+        "v9"
+      ],
+      "scorerVerdict": [
+        {
+          "variantId": "v5",
+          "score": 0.27,
+          "sessionsCounted": 887,
+          "confidence": 0.85,
+          "reasoning": "242 click events across 887 sessions, with the sample showing ~1 click per 3-4 sessions consistently matching .btn-primary, yielding approximately 242/887 ≈ 0.27 session-level CTA click rate."
+        },
+        {
+          "variantId": "v7",
+          "score": 0.17,
+          "sessionsCounted": 42,
+          "confidence": 0.55,
+          "reasoning": "7 of 42 sessions had a .btn-primary click event, giving a CTA click rate of approximately 0.17, though the sample size is modest."
+        },
+        {
+          "variantId": "v8",
+          "score": 0.36,
+          "sessionsCounted": 39,
+          "confidence": 0.55,
+          "reasoning": "14 of 39 sessions had a .btn-primary click event, yielding a CTA click rate of approximately 0.36, though the sample size is modest."
+        },
+        {
+          "variantId": "v9",
+          "score": 0.25,
+          "sessionsCounted": 32,
+          "confidence": 0.5,
+          "reasoning": "8 of 32 sessions had a .btn-primary click event, giving a CTA click rate of 0.25, with a small sample size limiting confidence."
+        }
+      ],
+      "promoted": "v8",
+      "promotionReason": "promoted v8"
+    }
+  ],
+  "lineage": [
+    {
+      "id": "v0",
+      "parent": null,
+      "generation": 0,
+      "role": "seed",
+      "intrinsicRate": 0.22022075038403272,
+      "observedRate": 0.21913236929922136,
+      "sessions": 899,
+      "conversions": 197,
+      "outcome": "previous_champion",
+      "championRuns": [
+        {
+          "generation": 1,
+          "sessions": 899,
+          "conversions": 197,
+          "observedRate": 0.21913236929922136
+        }
+      ]
+    },
+    {
+      "id": "v1",
+      "parent": "v0",
+      "generation": 1,
+      "role": "challenger",
+      "intrinsicRate": 0.25823864561333915,
+      "observedRate": 0.3333333333333333,
+      "sessions": 36,
+      "conversions": 12,
+      "hypothesis": "Replacing the generic 'Start Free Trial' CTA with the outcome-specific 'Get My Free 20-Min Plan' — paired with active FOMO framing in the social proof — will increase hero CTA clicks by making the value exchange feel more concrete and immediate.",
+      "mutations": [
+        {
+          "kind": "text_content",
+          "file": "index.html",
+          "selector": ".hero-buttons .btn-primary",
+          "text": "Get My Free 20-Min Plan",
+          "reason": "Outcome-specific copy ('20-Min Plan') ties the click directly to the brand's core promise, reducing ambiguity about what the user gets and lowering the perceived commitment barrier."
+        },
+        {
+          "kind": "text_content",
+          "file": "index.html",
+          "selector": ".hero-proof",
+          "text": "Join <strong>45,000+</strong> busy professionals already hitting their goals",
+          "reason": "Shifting from 'Trusted by' (passive) to 'Join … already hitting their goals' (active) creates mild FOMO and frames the click as joining a successful group rather than just trusting a brand."
+        }
+      ],
+      "outcome": "previous_champion",
+      "championRuns": [
+        {
+          "generation": 2,
+          "sessions": 888,
+          "conversions": 245,
+          "observedRate": 0.2759009009009009
+        }
+      ]
+    },
+    {
+      "id": "v2",
+      "parent": "v0",
+      "generation": 1,
+      "role": "challenger",
+      "intrinsicRate": 0.24059263740468823,
+      "observedRate": 0.2571428571428571,
+      "sessions": 35,
+      "conversions": 9,
+      "hypothesis": "Inserting a 'No credit card required · Cancel anytime' micro-copy line directly below the hero CTA buttons will reduce perceived risk and lift click-through by removing the most common hesitation point at the moment of decision.",
+      "mutations": [
+        {
+          "kind": "add_node",
+          "file": "index.html",
+          "parent_selector": ".hero .container",
+          "position": "last_child",
+          "html": "<p style=\"margin-top:12px;font-size:0.8125rem;color:#6b7280;\">No credit card required &nbsp;·&nbsp; Cancel anytime</p>",
+          "reason": "Friction-reducing reassurance placed immediately after the CTA buttons addresses the most common objection (payment commitment) at the exact decision moment, without altering the button itself."
+        }
+      ],
+      "outcome": "abandoned"
+    },
+    {
+      "id": "v3",
+      "parent": "v0",
+      "generation": 1,
+      "role": "challenger",
+      "intrinsicRate": 0.2119855552526672,
+      "observedRate": 0.16666666666666666,
+      "sessions": 30,
+      "conversions": 5,
+      "hypothesis": "Making the primary CTA button physically larger and adding a branded green glow shadow will increase its visual salience on the white hero background, drawing the eye faster and lifting click rate through improved affordance.",
+      "mutations": [
+        {
+          "kind": "css_property",
+          "file": "index.html",
+          "selector": ".btn-primary",
+          "property": "padding",
+          "value": "18px 40px",
+          "reason": "Increasing padding from 14px/32px to 18px/40px creates a larger tap/click target and signals higher importance relative to the secondary button, guiding users toward the primary action."
+        },
+        {
+          "kind": "css_property",
+          "file": "index.html",
+          "selector": ".btn-primary",
+          "property": "box-shadow",
+          "value": "0 4px 14px rgba(34,197,94,0.4)",
+          "reason": "A soft green glow shadow uses the brand's primary color to make the CTA button visually 'lift' off the white background, increasing contrast and drawing the eye without changing any locked brand colors."
+        }
+      ],
+      "outcome": "abandoned"
+    },
+    {
+      "id": "v4",
+      "parent": "v1",
+      "generation": 2,
+      "role": "challenger",
+      "intrinsicRate": 0.29041933499192835,
+      "observedRate": 0.2926829268292683,
+      "sessions": 41,
+      "conversions": 12,
+      "hypothesis": "Adding a time-limited urgency line directly above the hero CTA will trigger loss-aversion and increase primary CTA clicks.",
+      "mutations": [
+        {
+          "kind": "add_node",
+          "file": "index.html",
+          "parent_selector": ".hero-buttons",
+          "position": "before",
+          "html": "<p class=\"hero-urgency\" style=\"font-size:0.875rem;font-weight:600;color:#16a34a;margin-bottom:8px;letter-spacing:0.01em;\">🔥 <strong>Limited spots this week</strong> — free plan offer ends Friday</p>",
+          "reason": "A scarcity/urgency signal immediately above the CTA button creates FOMO and motivates users to click before they scroll away."
+        }
+      ],
+      "outcome": "abandoned"
+    },
+    {
+      "id": "v5",
+      "parent": "v1",
+      "generation": 2,
+      "role": "challenger",
+      "intrinsicRate": 0.2582679920583703,
+      "observedRate": 0.3,
+      "sessions": 40,
+      "conversions": 12,
+      "hypothesis": "Reducing the vertical distance between the hero subhead and the CTA button keeps the user's eye on the action and lifts click-through before attention drifts.",
+      "mutations": [
+        {
+          "kind": "css_property",
+          "file": "index.html",
+          "selector": ".hero-buttons",
+          "property": "margin-top",
+          "value": "24px",
+          "reason": "Cutting margin-top from 40px to 24px tightens the visual path from the subhead to the CTA, reducing the cognitive gap the user must bridge before clicking."
+        },
+        {
+          "kind": "css_property",
+          "file": "index.html",
+          "selector": ".btn-primary",
+          "property": "padding",
+          "value": "18px 40px",
+          "reason": "A slightly larger button tap-target and more visual mass compensates for the reduced surrounding whitespace, keeping the CTA prominent."
+        }
+      ],
+      "outcome": "previous_champion",
+      "championRuns": [
+        {
+          "generation": 3,
+          "sessions": 887,
+          "conversions": 242,
+          "observedRate": 0.27282976324689967
+        }
+      ]
+    },
+    {
+      "id": "v6",
+      "parent": "v1",
+      "generation": 2,
+      "role": "challenger",
+      "intrinsicRate": 0.2575678556344229,
+      "observedRate": 0.2903225806451613,
+      "sessions": 31,
+      "conversions": 9,
+      "hypothesis": "Removing the secondary 'See How It Works' button eliminates choice paralysis in the hero, channelling all decision energy into the single primary CTA.",
+      "mutations": [
+        {
+          "kind": "remove_node",
+          "file": "index.html",
+          "selector": ".hero-buttons .btn-secondary",
+          "reason": "Two competing buttons split user attention; removing the secondary option makes the primary CTA the only available action, reducing friction and increasing its click rate."
+        }
+      ],
+      "outcome": "abandoned"
+    },
+    {
+      "id": "v7",
+      "parent": "v5",
+      "generation": 3,
+      "role": "challenger",
+      "intrinsicRate": 0.28327048584528525,
+      "observedRate": 0.16666666666666666,
+      "sessions": 42,
+      "conversions": 7,
+      "hypothesis": "Fixing the broken escaped-HTML in .hero-proof so '45,000+' renders visually bold will strengthen the social-proof signal directly below the CTA, increasing user confidence and primary CTA clicks.",
+      "mutations": [
+        {
+          "kind": "text_content",
+          "file": "index.html",
+          "selector": ".hero-proof",
+          "text": "Join <strong>45,000+</strong> busy professionals already hitting their goals",
+          "reason": "The current markup uses escaped entities (&lt;strong&gt;) so the number never renders bold — fixing this makes the member count visually prominent, which is the key trust signal near the CTA."
+        }
+      ],
+      "outcome": "abandoned"
+    },
+    {
+      "id": "v8",
+      "parent": "v5",
+      "generation": 3,
+      "role": "challenger",
+      "intrinsicRate": 0.23546014588979106,
+      "observedRate": 0.358974358974359,
+      "sessions": 39,
+      "conversions": 14,
+      "hypothesis": "Adding a 'No credit card required · Cancel anytime' micro-copy line immediately after the hero button cluster removes the #1 friction point at the decision moment, lifting primary CTA clicks.",
+      "mutations": [
+        {
+          "kind": "add_node",
+          "file": "index.html",
+          "parent_selector": ".hero-buttons",
+          "position": "after",
+          "html": "<p class=\"hero-cta-nudge\" style=\"margin-top:10px;font-size:0.8125rem;color:#6b7280;\">No credit card required &middot; Cancel anytime</p>",
+          "reason": "Risk-reduction copy placed at the exact point of hesitation (right after the CTA buttons) addresses the most common objection to starting a free trial without requiring the user to scroll or search for reassurance."
+        }
+      ],
+      "outcome": "current_champion"
+    },
+    {
+      "id": "v9",
+      "parent": "v5",
+      "generation": 3,
+      "role": "challenger",
+      "intrinsicRate": 0.30791632705025324,
+      "observedRate": 0.25,
+      "sessions": 32,
+      "conversions": 8,
+      "hypothesis": "Visually de-emphasizing the secondary 'See How It Works' button by reducing its opacity and font-size will reduce click competition and funnel more attention toward the primary CTA.",
+      "mutations": [
+        {
+          "kind": "css_property",
+          "file": "index.html",
+          "selector": ".btn-secondary",
+          "property": "opacity",
+          "value": "0.55",
+          "reason": "The secondary button currently has the same visual weight as the primary; lowering opacity creates a clear hierarchy so the primary CTA is the obvious first choice."
+        },
+        {
+          "kind": "css_property",
+          "file": "index.html",
+          "selector": ".btn-secondary",
+          "property": "font-size",
+          "value": "0.875rem",
+          "reason": "Reducing the secondary button's font-size relative to the primary reinforces the visual hierarchy and signals to users which action is the intended next step."
+        }
+      ],
+      "outcome": "abandoned"
+    }
+  ],
+  "winner": "v8",
+  "startedAt": 1777726849442,
+  "finishedAt": 1777727027302,
+  "renderedToDir": "/home/nacho/proyectos/ClaudeOS/Projects/petri-mcp/repo/demo/sim-seed42"
+}

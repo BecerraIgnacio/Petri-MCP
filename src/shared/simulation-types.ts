@@ -2,11 +2,24 @@ import { z } from "zod";
 import { Mutation } from "../agents/ux-ui-evolver/schema.js";
 import { ScoredVariant, TargetMetric } from "./run-meta.js";
 
-export const LineageOutcome = z.enum(["promoted", "abandoned", "current_champion"]);
+export const LineageOutcome = z.enum([
+  "promoted",
+  "abandoned",
+  "current_champion",
+  "previous_champion",
+]);
 export type LineageOutcome = z.infer<typeof LineageOutcome>;
 
 export const LineageRole = z.enum(["seed", "challenger"]);
 export type LineageRole = z.infer<typeof LineageRole>;
+
+export const ChampionRun = z.object({
+  generation: z.number().int().min(1),
+  sessions: z.number().int().nonnegative(),
+  conversions: z.number().int().nonnegative(),
+  observedRate: z.number().min(0).max(1),
+});
+export type ChampionRun = z.infer<typeof ChampionRun>;
 
 export const LineageEntry = z.object({
   id: z.string().regex(/^v[0-9]+$/),
@@ -14,11 +27,16 @@ export const LineageEntry = z.object({
   generation: z.number().int().nonnegative(),
   role: LineageRole,
   intrinsicRate: z.number().min(0).max(1),
+  // sessions/conversions/observedRate are the FIRST-APPEARANCE snapshot
+  // (challenger gen for promoted variants, gen 0 for the seed). They never
+  // get overwritten when a variant later runs as champion — those subsequent
+  // gens accumulate in `championRuns` instead.
   observedRate: z.number().min(0).max(1),
   sessions: z.number().int().nonnegative(),
   conversions: z.number().int().nonnegative(),
   hypothesis: z.string().optional(),
   mutations: z.array(Mutation).optional(),
+  championRuns: z.array(ChampionRun).optional(),
   outcome: LineageOutcome,
 });
 export type LineageEntry = z.infer<typeof LineageEntry>;

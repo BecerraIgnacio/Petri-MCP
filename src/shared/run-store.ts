@@ -1,5 +1,7 @@
 import { Redis } from "@upstash/redis";
 import {
+  CONNECT_KEY,
+  ConnectRecord,
   EVENTS_KEY,
   GENERATIONS_KEY,
   GenerationRecord,
@@ -34,6 +36,17 @@ export async function getRunMeta(runId: string): Promise<RunMeta | null> {
   const raw = await getRedis().get(RUN_META_KEY(runId));
   if (raw == null) return null;
   return RunMeta.parse(raw);
+}
+
+export async function getConnectRecord(runId: string): Promise<ConnectRecord | null> {
+  const raw = await getRedis().get(CONNECT_KEY(runId));
+  if (raw == null) return null;
+  return ConnectRecord.parse(raw);
+}
+
+export async function setConnectRecord(record: ConnectRecord): Promise<void> {
+  ConnectRecord.parse(record);
+  await getRedis().set(CONNECT_KEY(record.runId), record);
 }
 
 export async function setRunMeta(meta: RunMeta): Promise<void> {

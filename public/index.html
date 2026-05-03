@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>petri-mcp · Evolution layer for v0</title>
+  <meta name="description" content="petri-mcp runs 90/10 traffic splits across variants of your site, locks the brand-defining elements, and keeps what wins.">
+  <link rel="icon" type="image/png" href="/logo.png">
+  <link rel="stylesheet" href="/theme.css">
+  <style>
+    main { padding-bottom: var(--space-4xl); }
+
+    .hero {
+      padding: var(--space-4xl) var(--space-lg) var(--space-3xl);
+      text-align: center;
+      max-width: 880px;
+      margin: 0 auto;
+    }
+    .hero .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 10px 4px 4px;
+      border-radius: var(--radius-pill);
+      background: var(--bg-elev-1);
+      border: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--fg-muted);
+      margin-bottom: var(--space-lg);
+    }
+    .hero .eyebrow .dot {
+      width: 18px; height: 18px;
+      border-radius: var(--radius-pill);
+      background: var(--accent);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent-fg);
+      font-size: 10px;
+      font-weight: 600;
+    }
+    .hero h1 {
+      font-size: 64px;
+      line-height: 1.05;
+      letter-spacing: -0.045em;
+      margin-bottom: var(--space-md);
+    }
+    .hero .tagline {
+      font-size: 24px;
+      line-height: 1.35;
+      letter-spacing: -0.02em;
+      color: var(--fg);
+      font-weight: 500;
+      max-width: 720px;
+      margin: 0 auto var(--space-lg);
+    }
+    .hero .tagline .accent {
+      color: var(--brand-accent);
+      font-weight: 600;
+    }
+    .hero .sub {
+      font-size: 17px;
+      line-height: 1.6;
+      color: var(--fg-muted);
+      max-width: 620px;
+      margin: 0 auto var(--space-xl);
+      letter-spacing: -0.005em;
+    }
+    .hero .sub .closer {
+      color: var(--fg);
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+    .hero .cta-row {
+      display: inline-flex;
+      gap: var(--space-md);
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .install {
+      max-width: 620px;
+      margin: var(--space-xl) auto 0;
+      text-align: left;
+    }
+    .install-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--fg-muted);
+      font-weight: 600;
+      margin-bottom: var(--space-sm);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-md);
+    }
+    .install-label .copy-btn {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      color: var(--fg-muted);
+      background: transparent;
+      border: 1px solid var(--border-strong);
+      padding: 4px 10px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      text-transform: uppercase;
+      font-weight: 600;
+      transition: color 0.12s ease, border-color 0.12s ease;
+    }
+    .install-label .copy-btn:hover { color: var(--fg); border-color: var(--fg-muted); }
+    .install-label .copy-btn.copied { color: #6ed99c; border-color: rgba(110, 217, 156, 0.4); }
+    .install pre {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.6;
+      background: var(--bg-elev-1);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: var(--space-md) var(--space-lg);
+      margin: 0;
+      overflow-x: auto;
+      color: var(--fg);
+    }
+
+    .section {
+      padding: var(--space-3xl) var(--space-lg);
+      max-width: var(--max-width);
+      margin: 0 auto;
+    }
+    .section-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: var(--space-md);
+      margin-bottom: var(--space-xl);
+      flex-wrap: wrap;
+    }
+    .section-head h2 { font-size: 28px; }
+    .section-head .lead {
+      color: var(--fg-muted);
+      font-size: 14px;
+      max-width: 420px;
+    }
+
+    .how-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-md);
+    }
+    @media (max-width: 760px) {
+      .how-grid { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 44px; }
+    }
+    .how-card {
+      padding: var(--space-lg);
+      background: var(--bg-elev-1);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+      min-height: 200px;
+    }
+    .how-card .step {
+      width: 24px; height: 24px;
+      border-radius: var(--radius);
+      background: var(--bg-elev-2);
+      border: 1px solid var(--border-strong);
+      color: var(--fg-muted);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+    .how-card h3 {
+      font-size: 16px;
+      letter-spacing: -0.015em;
+    }
+    .how-card p {
+      color: var(--fg-muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .preview-frame {
+      margin-top: var(--space-2xl);
+      padding: var(--space-md);
+      background: var(--bg-elev-1);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+    }
+    .preview-frame .frame-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-md);
+      padding: 0 var(--space-sm) var(--space-sm);
+    }
+    .preview-frame .frame-head .label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--fg-muted);
+      font-weight: 600;
+    }
+    .preview-frame .frame-head .openout {
+      font-size: 12px;
+      color: var(--fg-muted);
+      text-decoration: none;
+      letter-spacing: -0.005em;
+      padding: 4px 10px;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius);
+      transition: color 0.12s ease, border-color 0.12s ease;
+    }
+    .preview-frame .frame-head .openout:hover {
+      color: var(--fg);
+      border-color: var(--fg-muted);
+    }
+    .preview-frame .embed {
+      aspect-ratio: 16 / 10;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .preview-frame .embed iframe {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: var(--bg);
+    }
+
+    footer.site-footer {
+      border-top: 1px solid var(--border);
+      padding: var(--space-xl) var(--space-lg);
+      max-width: var(--max-width);
+      margin: var(--space-2xl) auto 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--space-md);
+      flex-wrap: wrap;
+      color: var(--fg-muted);
+      font-size: 12px;
+    }
+    footer.site-footer .links {
+      display: inline-flex;
+      gap: var(--space-lg);
+    }
+    footer.site-footer a { color: var(--fg-muted); }
+    footer.site-footer a:hover { color: var(--fg); }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/">
+      <span class="brand-mark"></span>
+      <span>petri-mcp</span>
+    </a>
+    <nav>
+      <a class="btn btn-ghost" href="https://github.com/BecerraIgnacio/petri-MCP" target="_blank" rel="noreferrer">GitHub</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <span class="eyebrow"><span class="dot">▲</span> MCP server for v0</span>
+      <h1>Petri — the future of A/B testing.</h1>
+      <p class="tagline">
+        <span class="accent">v0</span> makes it beautiful.
+        <span class="accent">Petri</span> makes it perform.
+      </p>
+      <p class="sub">
+        Petri makes your website evolve, just like nature does — survival of the fittest.
+        It generates 3 variants from your site and redirects 10% of your user flow to them.
+        If any perform better, they evolve. Manual A/B testing is dead.
+        <span class="closer">Long live the petri dish.</span>
+      </p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="#install">Add to your MCP client</a>
+        <a class="btn btn-secondary" href="https://github.com/BecerraIgnacio/petri-MCP" target="_blank" rel="noreferrer">View on GitHub</a>
+      </div>
+      <div class="install" id="install">
+        <div class="install-label">
+          <span>MCP config</span>
+          <button class="copy-btn" type="button" id="copy-config">Copy</button>
+        </div>
+<pre id="config-block">{
+  "mcpServers": {
+    "petri-mcp": {
+      "url": "https://petri-mcp.vercel.app/api/mcp"
+    }
+  }
+}</pre>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>How it works</h2>
+        <p class="lead">
+          Two agents per generation. One protects the brand. The other mutates
+          everything else. Whatever wins becomes the new champion.
+        </p>
+      </div>
+
+      <div class="how-grid">
+        <div class="how-card">
+          <span class="step">1</span>
+          <h3>Vibe-keeper</h3>
+          <p>
+            Reads your site and emits a lock manifest — wordmark, palette,
+            voice, key phrases. Anything in the manifest is invalid by
+            construction for the next agent.
+          </p>
+        </div>
+        <div class="how-card">
+          <span class="step">2</span>
+          <h3>UX/UI evolver</h3>
+          <p>
+            Receives the lock + the target metric, proposes typed mutations.
+            Validator checks each mutation against the lock before it ships.
+            No LLM judges another LLM.
+          </p>
+        </div>
+        <div class="how-card">
+          <span class="step">3</span>
+          <h3>Connect, then simulate</h3>
+          <p>
+            From v0 (or any MCP client), call <span class="mono">connect_site</span>
+            and you get a control panel URL. From there, run a deterministic
+            simulation and watch the phylogenetic tree grow — no real traffic, no v0 credits.
+          </p>
+        </div>
+      </div>
+
+      <div class="preview-frame">
+        <div class="frame-head">
+          <span class="label">Live explorer · seed 42 · 3 generations</span>
+          <a class="openout" href="/demo/sim-seed42/index.html" target="_blank" rel="noreferrer">Open full explorer →</a>
+        </div>
+        <div class="embed">
+          <iframe src="/demo/sim-seed42/index.html" loading="lazy" tabindex="-1" title="petri-mcp · phylogenetic explorer demo"></iframe>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div>petri-mcp · MCP server for v0</div>
+    <div class="links">
+      <a href="https://github.com/BecerraIgnacio/petri-MCP" target="_blank" rel="noreferrer">GitHub</a>
+      <a href="https://modelcontextprotocol.io" target="_blank" rel="noreferrer">MCP</a>
+    </div>
+  </footer>
+  <script>
+    (function () {
+      var btn = document.getElementById('copy-config');
+      var block = document.getElementById('config-block');
+      if (!btn || !block) return;
+      btn.addEventListener('click', function () {
+        var text = block.textContent || '';
+        navigator.clipboard.writeText(text).then(function () {
+          btn.textContent = 'Copied';
+          btn.classList.add('copied');
+          setTimeout(function () { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1600);
+        }).catch(function () {
+          btn.textContent = 'Copy failed';
+          setTimeout(function () { btn.textContent = 'Copy'; }, 1600);
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

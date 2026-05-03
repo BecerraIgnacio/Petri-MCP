@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>petri-mcp · sim-42-moocnzxe</title>
+  <style>
+    @font-face {
+      font-family: "Geist";
+      src: url("https://petri-mcp.vercel.app/fonts/Geist-Variable.woff2") format("woff2-variations");
+      font-weight: 100 900;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: "Geist Mono";
+      src: url("https://petri-mcp.vercel.app/fonts/GeistMono-Variable.woff2") format("woff2-variations");
+      font-weight: 100 900;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    :root {
+      --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      --font-mono: "Geist Mono", ui-monospace, "SF Mono", Monaco, Menlo, monospace;
+      --bg: #0a0a0a;
+      --bg-elev-1: #111111;
+      --bg-elev-2: #161616;
+      --fg: #ededed;
+      --fg-muted: #888888;
+      --fg-subtle: #555555;
+      --border: #1f1f1f;
+      --border-strong: #2a2a2a;
+      --accent: #0070f3;
+      --accent-fg: #ffffff;
+      --radius: 6px;
+      --radius-pill: 999px;
+      --header-h: 56px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; height: 100%; }
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--fg);
+      display: grid;
+      grid-template-rows: var(--header-h) 1fr;
+      overflow: hidden;
+      font-size: 14px;
+      letter-spacing: -0.01em;
+      font-feature-settings: "cv11" 1, "ss01" 1;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    header {
+      padding: 0 var(--space-lg, 24px);
+      padding-left: 24px;
+      padding-right: 24px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(10, 10, 10, 0.85);
+      backdrop-filter: saturate(180%) blur(12px);
+      -webkit-backdrop-filter: saturate(180%) blur(12px);
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      font-size: 12px;
+      color: var(--fg-muted);
+      height: var(--header-h);
+    }
+    header .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: -0.015em;
+      color: var(--fg);
+      margin-right: 8px;
+    }
+    header .brand-mark {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      background: var(--fg);
+    }
+    header .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 2px 10px;
+      height: 22px;
+      border-radius: var(--radius-pill);
+      background: var(--bg-elev-1);
+      border: 1px solid var(--border-strong);
+      color: var(--fg-muted);
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.005em;
+    }
+    header .badge.winner-badge {
+      background: rgba(0, 112, 243, 0.12);
+      border-color: rgba(0, 112, 243, 0.4);
+      color: #69b1ff;
+    }
+    header .badge.metric-badge {
+      margin-left: auto;
+      background: transparent;
+      border-color: var(--border-strong);
+      color: var(--fg);
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: 460px 1fr;
+      min-height: 0;
+    }
+    #tree {
+      padding: 24px;
+      overflow: auto;
+      border-right: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .gen-row { margin-bottom: 28px; }
+    .gen-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--fg-muted);
+      margin-bottom: 12px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+    .gen-cards { display: flex; flex-direction: column; gap: 6px; }
+
+    .card {
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      background: var(--bg-elev-1);
+      transition: border-color 0.12s ease, background 0.12s ease;
+      font-size: 12px;
+    }
+    .card:hover {
+      border-color: var(--border-strong);
+      background: var(--bg-elev-2);
+    }
+    .card.selected {
+      border-color: var(--accent);
+      background: rgba(0, 112, 243, 0.06);
+      box-shadow: 0 0 0 1px var(--accent) inset;
+    }
+    .card .row1 {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .card .id {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--fg);
+      letter-spacing: -0.01em;
+    }
+    .card .parent {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--fg-subtle);
+    }
+    .card .rates {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--fg-muted);
+      font-variant-numeric: tabular-nums;
+      margin-top: 2px;
+      letter-spacing: -0.005em;
+    }
+    .card .hypothesis {
+      font-size: 11px;
+      color: var(--fg-muted);
+      margin-top: 8px;
+      line-height: 1.5;
+    }
+
+    .badge-outcome {
+      display: inline-block;
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: var(--radius-pill);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-top: 8px;
+      border: 1px solid transparent;
+    }
+    .out-seed {
+      background: var(--bg-elev-2);
+      color: var(--fg-muted);
+      border-color: var(--border-strong);
+    }
+    .out-promoted, .out-previous_champion {
+      background: transparent;
+      color: #69b1ff;
+      border-color: rgba(0, 112, 243, 0.4);
+    }
+    .out-abandoned {
+      background: transparent;
+      color: var(--fg-subtle);
+      border-color: var(--border);
+    }
+    .out-current_champion {
+      background: var(--accent);
+      color: var(--accent-fg);
+      border-color: var(--accent);
+    }
+
+    /* Cards on the winning lineage chain get a subtle accent tint. */
+    .card.lineage-winner {
+      border-color: rgba(0, 112, 243, 0.4);
+      background: rgba(0, 112, 243, 0.04);
+    }
+    .card.lineage-winner.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent) inset;
+    }
+
+    .frame-wrap {
+      position: relative;
+      background: #fff;
+      min-height: 0;
+    }
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: white;
+    }
+    .frame-meta {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(10, 10, 10, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: var(--fg);
+      padding: 6px 10px;
+      border-radius: var(--radius);
+      font-size: 11px;
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.005em;
+      pointer-events: none;
+      border: 1px solid var(--border-strong);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="brand">
+      <span class="brand-mark"></span>
+      <span>petri-mcp</span>
+    </span>
+    <span class="badge">sim-42-moocnzxe</span>
+    <span class="badge winner-badge">winner v8</span>
+    <span class="badge">3 gens × 1000 sessions</span>
+    <span class="badge">split 90/10</span>
+    <span class="badge metric-badge">primary_cta_clicks ↑</span>
+  </header>
+  <main>
+    <div id="tree"></div>
+    <div class="frame-wrap">
+      <div class="frame-meta" id="frame-meta">—</div>
+      <iframe id="frame" sandbox="allow-same-origin"></iframe>
+    </div>
+  </main>
+  <script>
+    const data = {"status":"ok","simId":"sim-42-moocnzxe","displayName":"simplefit","metric":{"name":"primary_cta_clicks","description":"Sessions where the user clicked the primary CTA in the hero (selector matching .btn-primary). A session counts if any click event with that selector exists.","direction":"increase"},"config":{"generations":3,"sessionsPerGen":1000,"nVariants":3,"splitRatio":90,"seed":42},"generations":[{"generation":1,"championAtStart":"v0","variantIds":["v0","v1","v2","v3"],"scorerVerdict":[{"variantId":"v0","score":0.219,"sessionsCounted":899,"confidence":0.9,"reasoning":"197 click events on .btn-primary across 899 unique sessions; assuming each click event maps to one unique session (consistent with the pattern of at most one click per session in the sample), approximately 197/899 ≈ 21.9% of sessions satisfied the metric."},{"variantId":"v1","score":0.333,"sessionsCounted":36,"confidence":0.55,"reasoning":"12 of 36 sessions had a .btn-primary click event, yielding a 33.3% conversion rate, though the sample size is modest."},{"variantId":"v2","score":0.257,"sessionsCounted":35,"confidence":0.5,"reasoning":"9 of 35 sessions had a .btn-primary click event, yielding a 25.7% conversion rate, with a small sample size."},{"variantId":"v3","score":0.167,"sessionsCounted":30,"confidence":0.5,"reasoning":"5 of 30 sessions had a .btn-primary click event, yielding a 16.7% conversion rate, with a small sample size."}],"promoted":"v1","promotionReason":"promoted v1"},{"generation":2,"championAtStart":"v1","variantIds":["v1","v4","v5","v6"],"scorerVerdict":[{"variantId":"v1","score":0.276,"sessionsCounted":888,"confidence":0.9,"reasoning":"245 click events on .btn-primary across 888 unique sessions; the recent sample shows ~245 sessions with qualifying clicks out of 888 total, yielding approximately 27.6% session-level CTA click rate."},{"variantId":"v4","score":0.293,"sessionsCounted":41,"confidence":0.55,"reasoning":"12 of 41 unique sessions contained a .btn-primary click event, giving a 29.3% CTA click rate, though the smaller sample reduces confidence."},{"variantId":"v5","score":0.3,"sessionsCounted":40,"confidence":0.55,"reasoning":"12 of 40 unique sessions contained a .btn-primary click event, yielding a 30% CTA click rate across a modest sample."},{"variantId":"v6","score":0.29,"sessionsCounted":31,"confidence":0.5,"reasoning":"9 of 31 unique sessions contained a .btn-primary click event, giving approximately 29% CTA click rate, with lower confidence due to the small sample size."}],"promoted":"v5","promotionReason":"promoted v5"},{"generation":3,"championAtStart":"v5","variantIds":["v5","v7","v8","v9"],"scorerVerdict":[{"variantId":"v5","score":0.27,"sessionsCounted":887,"confidence":0.85,"reasoning":"242 click events across 887 sessions, with the sample showing ~1 click per 3-4 sessions consistently matching .btn-primary, yielding approximately 242/887 ≈ 0.27 session-level CTA click rate."},{"variantId":"v7","score":0.17,"sessionsCounted":42,"confidence":0.55,"reasoning":"7 of 42 sessions had a .btn-primary click event, giving a CTA click rate of approximately 0.17, though the sample size is modest."},{"variantId":"v8","score":0.36,"sessionsCounted":39,"confidence":0.55,"reasoning":"14 of 39 sessions had a .btn-primary click event, yielding a CTA click rate of approximately 0.36, though the sample size is modest."},{"variantId":"v9","score":0.25,"sessionsCounted":32,"confidence":0.5,"reasoning":"8 of 32 sessions had a .btn-primary click event, giving a CTA click rate of 0.25, with a small sample size limiting confidence."}],"promoted":"v8","promotionReason":"promoted v8"}],"lineage":[{"id":"v0","parent":null,"generation":0,"role":"seed","intrinsicRate":0.22022075038403272,"observedRate":0.21913236929922136,"sessions":899,"conversions":197,"outcome":"previous_champion","championRuns":[{"generation":1,"sessions":899,"conversions":197,"observedRate":0.21913236929922136}]},{"id":"v1","parent":"v0","generation":1,"role":"challenger","intrinsicRate":0.25823864561333915,"observedRate":0.3333333333333333,"sessions":36,"conversions":12,"hypothesis":"Replacing the generic 'Start Free Trial' CTA with the outcome-specific 'Get My Free 20-Min Plan' — paired with active FOMO framing in the social proof — will increase hero CTA clicks by making the value exchange feel more concrete and immediate.","mutations":[{"kind":"text_content","file":"index.html","selector":".hero-buttons .btn-primary","text":"Get My Free 20-Min Plan","reason":"Outcome-specific copy ('20-Min Plan') ties the click directly to the brand's core promise, reducing ambiguity about what the user gets and lowering the perceived commitment barrier."},{"kind":"text_content","file":"index.html","selector":".hero-proof","text":"Join <strong>45,000+</strong> busy professionals already hitting their goals","reason":"Shifting from 'Trusted by' (passive) to 'Join … already hitting their goals' (active) creates mild FOMO and frames the click as joining a successful group rather than just trusting a brand."}],"outcome":"previous_champion","championRuns":[{"generation":2,"sessions":888,"conversions":245,"observedRate":0.2759009009009009}]},{"id":"v2","parent":"v0","generation":1,"role":"challenger","intrinsicRate":0.24059263740468823,"observedRate":0.2571428571428571,"sessions":35,"conversions":9,"hypothesis":"Inserting a 'No credit card required · Cancel anytime' micro-copy line directly below the hero CTA buttons will reduce perceived risk and lift click-through by removing the most common hesitation point at the moment of decision.","mutations":[{"kind":"add_node","file":"index.html","parent_selector":".hero .container","position":"last_child","html":"<p style=\"margin-top:12px;font-size:0.8125rem;color:#6b7280;\">No credit card required &nbsp;·&nbsp; Cancel anytime</p>","reason":"Friction-reducing reassurance placed immediately after the CTA buttons addresses the most common objection (payment commitment) at the exact decision moment, without altering the button itself."}],"outcome":"abandoned"},{"id":"v3","parent":"v0","generation":1,"role":"challenger","intrinsicRate":0.2119855552526672,"observedRate":0.16666666666666666,"sessions":30,"conversions":5,"hypothesis":"Making the primary CTA button physically larger and adding a branded green glow shadow will increase its visual salience on the white hero background, drawing the eye faster and lifting click rate through improved affordance.","mutations":[{"kind":"css_property","file":"index.html","selector":".btn-primary","property":"padding","value":"18px 40px","reason":"Increasing padding from 14px/32px to 18px/40px creates a larger tap/click target and signals higher importance relative to the secondary button, guiding users toward the primary action."},{"kind":"css_property","file":"index.html","selector":".btn-primary","property":"box-shadow","value":"0 4px 14px rgba(34,197,94,0.4)","reason":"A soft green glow shadow uses the brand's primary color to make the CTA button visually 'lift' off the white background, increasing contrast and drawing the eye without changing any locked brand colors."}],"outcome":"abandoned"},{"id":"v4","parent":"v1","generation":2,"role":"challenger","intrinsicRate":0.29041933499192835,"observedRate":0.2926829268292683,"sessions":41,"conversions":12,"hypothesis":"Adding a time-limited urgency line directly above the hero CTA will trigger loss-aversion and increase primary CTA clicks.","mutations":[{"kind":"add_node","file":"index.html","parent_selector":".hero-buttons","position":"before","html":"<p class=\"hero-urgency\" style=\"font-size:0.875rem;font-weight:600;color:#16a34a;margin-bottom:8px;letter-spacing:0.01em;\">🔥 <strong>Limited spots this week</strong> — free plan offer ends Friday</p>","reason":"A scarcity/urgency signal immediately above the CTA button creates FOMO and motivates users to click before they scroll away."}],"outcome":"abandoned"},{"id":"v5","parent":"v1","generation":2,"role":"challenger","intrinsicRate":0.2582679920583703,"observedRate":0.3,"sessions":40,"conversions":12,"hypothesis":"Reducing the vertical distance between the hero subhead and the CTA button keeps the user's eye on the action and lifts click-through before attention drifts.","mutations":[{"kind":"css_property","file":"index.html","selector":".hero-buttons","property":"margin-top","value":"24px","reason":"Cutting margin-top from 40px to 24px tightens the visual path from the subhead to the CTA, reducing the cognitive gap the user must bridge before clicking."},{"kind":"css_property","file":"index.html","selector":".btn-primary","property":"padding","value":"18px 40px","reason":"A slightly larger button tap-target and more visual mass compensates for the reduced surrounding whitespace, keeping the CTA prominent."}],"outcome":"previous_champion","championRuns":[{"generation":3,"sessions":887,"conversions":242,"observedRate":0.27282976324689967}]},{"id":"v6","parent":"v1","generation":2,"role":"challenger","intrinsicRate":0.2575678556344229,"observedRate":0.2903225806451613,"sessions":31,"conversions":9,"hypothesis":"Removing the secondary 'See How It Works' button eliminates choice paralysis in the hero, channelling all decision energy into the single primary CTA.","mutations":[{"kind":"remove_node","file":"index.html","selector":".hero-buttons .btn-secondary","reason":"Two competing buttons split user attention; removing the secondary option makes the primary CTA the only available action, reducing friction and increasing its click rate."}],"outcome":"abandoned"},{"id":"v7","parent":"v5","generation":3,"role":"challenger","intrinsicRate":0.28327048584528525,"observedRate":0.16666666666666666,"sessions":42,"conversions":7,"hypothesis":"Fixing the broken escaped-HTML in .hero-proof so '45,000+' renders visually bold will strengthen the social-proof signal directly below the CTA, increasing user confidence and primary CTA clicks.","mutations":[{"kind":"text_content","file":"index.html","selector":".hero-proof","text":"Join <strong>45,000+</strong> busy professionals already hitting their goals","reason":"The current markup uses escaped entities (&lt;strong&gt;) so the number never renders bold — fixing this makes the member count visually prominent, which is the key trust signal near the CTA."}],"outcome":"abandoned"},{"id":"v8","parent":"v5","generation":3,"role":"challenger","intrinsicRate":0.23546014588979106,"observedRate":0.358974358974359,"sessions":39,"conversions":14,"hypothesis":"Adding a 'No credit card required · Cancel anytime' micro-copy line immediately after the hero button cluster removes the #1 friction point at the decision moment, lifting primary CTA clicks.","mutations":[{"kind":"add_node","file":"index.html","parent_selector":".hero-buttons","position":"after","html":"<p class=\"hero-cta-nudge\" style=\"margin-top:10px;font-size:0.8125rem;color:#6b7280;\">No credit card required &middot; Cancel anytime</p>","reason":"Risk-reduction copy placed at the exact point of hesitation (right after the CTA buttons) addresses the most common objection to starting a free trial without requiring the user to scroll or search for reassurance."}],"outcome":"current_champion"},{"id":"v9","parent":"v5","generation":3,"role":"challenger","intrinsicRate":0.30791632705025324,"observedRate":0.25,"sessions":32,"conversions":8,"hypothesis":"Visually de-emphasizing the secondary 'See How It Works' button by reducing its opacity and font-size will reduce click competition and funnel more attention toward the primary CTA.","mutations":[{"kind":"css_property","file":"index.html","selector":".btn-secondary","property":"opacity","value":"0.55","reason":"The secondary button currently has the same visual weight as the primary; lowering opacity creates a clear hierarchy so the primary CTA is the obvious first choice."},{"kind":"css_property","file":"index.html","selector":".btn-secondary","property":"font-size","value":"0.875rem","reason":"Reducing the secondary button's font-size relative to the primary reinforces the visual hierarchy and signals to users which action is the intended next step."}],"outcome":"abandoned"}],"winner":"v8","startedAt":1777726849442,"finishedAt":1777727027302,"renderedToDir":"/home/nacho/proyectos/ClaudeOS/Projects/petri-mcp/repo/demo/sim-seed42"};
+    const byGen = {};
+    for (const e of data.lineage) {
+      (byGen[e.generation] ||= []).push(e);
+    }
+    const generations = Object.keys(byGen).map(Number).sort(function (a, b) { return a - b; });
+
+    function fmt(n, d) { return n.toFixed(d); }
+    function pct(n) { return (n * 100).toFixed(1) + '%'; }
+
+    function el(tag, className, text) {
+      const e = document.createElement(tag);
+      if (className) e.className = className;
+      if (text != null) e.textContent = String(text);
+      return e;
+    }
+
+    // Walk the parent chain up from the winner to mark every entry in the winning lineage.
+    const winningChainIds = new Set();
+    {
+      let cur = data.lineage.find(function (e) { return e.id === data.winner; });
+      while (cur) {
+        winningChainIds.add(cur.id);
+        if (!cur.parent) break;
+        cur = data.lineage.find(function (e) { return e.id === cur.parent; });
+      }
+    }
+
+    function buildCard(entry) {
+      const card = el('div', 'card');
+      if (winningChainIds.has(entry.id)) card.classList.add('lineage-winner');
+      card.dataset.id = entry.id;
+
+      const row1 = el('div', 'row1');
+      row1.appendChild(el('span', 'id', entry.id));
+      row1.appendChild(el('span', 'parent', entry.parent ? '← ' + entry.parent : 'root'));
+      card.appendChild(row1);
+
+      card.appendChild(
+        el(
+          'div',
+          'rates',
+          'intrinsic ' + fmt(entry.intrinsicRate, 3) + ' · observed ' + fmt(entry.observedRate, 3) + ' (' + entry.conversions + '/' + entry.sessions + ')'
+        )
+      );
+
+      if (Array.isArray(entry.championRuns) && entry.championRuns.length > 0) {
+        const summary = entry.championRuns
+          .map(function (r) { return 'g' + r.generation + ': ' + r.conversions + '/' + r.sessions + ' (' + fmt(r.observedRate, 3) + ')'; })
+          .join(' · ');
+        card.appendChild(el('div', 'rates', 'as champion → ' + summary));
+      }
+
+      if (entry.hypothesis) {
+        card.appendChild(el('div', 'hypothesis', entry.hypothesis));
+      }
+
+      const outClass = String(entry.outcome).replace(/[^a-z_]/gi, '');
+      const outcomeBadge = el('span', 'badge-outcome out-' + outClass, entry.outcome.replace('_', ' '));
+      card.appendChild(outcomeBadge);
+
+      card.addEventListener('click', function () { selectCard(entry); });
+      return card;
+    }
+
+    function selectCard(entry) {
+      document.querySelectorAll('.card').forEach(function (c) { c.classList.remove('selected'); });
+      const node = document.querySelector('[data-id="' + entry.id + '"]');
+      if (node) {
+        node.classList.add('selected');
+        // Skip auto-scroll when embedded as an iframe (e.g. on the landing) so
+        // the parent page doesn't get scrolled into the iframe on initial load.
+        if (window === window.parent) {
+          node.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+      }
+      const frame = document.getElementById('frame');
+      frame.src = 'gen' + entry.generation + '/' + entry.id + '/index.html';
+      const meta = document.getElementById('frame-meta');
+      meta.textContent = entry.id + ' · gen' + entry.generation + ' · ' + entry.outcome.replace('_', ' ') + ' · ' + pct(entry.intrinsicRate) + ' intrinsic';
+    }
+
+    const tree = document.getElementById('tree');
+    for (const gen of generations) {
+      const row = el('div', 'gen-row');
+      const label = el('div', 'gen-label', 'Generation ' + gen + (gen === 0 ? ' · seed' : ''));
+      row.appendChild(label);
+      const cards = el('div', 'gen-cards');
+      for (const entry of byGen[gen]) {
+        cards.appendChild(buildCard(entry));
+      }
+      row.appendChild(cards);
+      tree.appendChild(row);
+    }
+
+    const winnerEntry = data.lineage.find(function (e) { return e.id === data.winner; });
+    if (winnerEntry) selectCard(winnerEntry);
+    else if (data.lineage[0]) selectCard(data.lineage[0]);
+  </script>
+</body>
+</html>

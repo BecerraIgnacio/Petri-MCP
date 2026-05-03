@@ -36,6 +36,32 @@ function clip(text: string): string {
   return text.slice(0, TOOL_RESULT_MAX_CHARS) + `\n…[clipped, ${text.length} chars total]`;
 }
 
+function summarizePreviousMutations(prev: Input["previousMutations"]): string[] {
+  if (!prev || prev.length === 0) return [];
+  // Group by kind+selector(+property) so "css_property padding × 4 gens on .btn-primary"
+  // collapses to one bullet — the evolver cares about axes, not raw counts.
+  const seen = new Map<string, { kind: string; target: string; gens: number[] }>();
+  for (const m of prev) {
+    const target = [m.selector, m.property, m.file].filter((x) => Boolean(x)).join(" · ");
+    const key = `${m.kind}::${target}`;
+    const entry = seen.get(key) ?? { kind: m.kind, target, gens: [] };
+    entry.gens.push(m.generation);
+    seen.set(key, entry);
+  }
+  const bullets = [...seen.values()].map((e) => {
+    const gens = e.gens.sort((a, b) => a - b).join(",");
+    const tail = e.target ? ` on ${e.target}` : "";
+    return `- ${e.kind}${tail} (gen ${gens})`;
+  });
+  return [
+    "",
+    "The current champion lineage already explored these axes:",
+    ...bullets,
+    "",
+    "**For maximum exploration this generation, prefer at least one variant that mutates a DIFFERENT kind/selector** than the bullets above. Re-doing the same axis is the lowest-information move; petri's value comes from breadth. Suggested directions still on the table for most sites: `text_content` on the headline / subhead, `attribute` changes (hrefs, alt, data-*), `add_node` for social proof / urgency / above-fold testimonial, `remove_node` for any visible distraction near the CTA, layout-impacting `css_property` (grid, flex, gap, max-width). Use these as inspiration — your hypothesis is still the boss.",
+  ];
+}
+
 function buildUserMessage(input: Input, metric: ResolvedMetric): string {
   const fallbackNote =
     !input.targetMetric && input.lockManifest.inferred_metric
@@ -53,6 +79,7 @@ function buildUserMessage(input: Input, metric: ResolvedMetric): string {
     "```json",
     JSON.stringify(input.lockManifest, null, 2),
     "```",
+    ...summarizePreviousMutations(input.previousMutations),
     "",
     `Produce ${input.nVariants} distinct variants. Each variant: one hypothesis, 1–3 small mutations. Use lock_check on every candidate mutation before including it. Submit via submit_variants.`,
   ];

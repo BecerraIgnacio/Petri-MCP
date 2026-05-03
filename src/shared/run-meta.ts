@@ -22,6 +22,10 @@ export const OriginSource = z.union([
     repoUrl: z.string().url(),
     repoRef: z.string().min(1).optional(),
   }),
+  z.object({
+    kind: z.literal("live"),
+    liveUrl: z.string().url(),
+  }),
 ]);
 export type OriginSource = z.infer<typeof OriginSource>;
 
@@ -47,6 +51,20 @@ export const SCORES_KEY = (runId: string, generation: number): string =>
   `petri:run:${runId}:scores:${generation}`;
 export const GENERATIONS_KEY = (runId: string): string =>
   `petri:run:${runId}:generations`;
+export const CONNECT_KEY = (runId: string): string => `petri:run:${runId}:connect`;
+
+// ConnectRecord is the lightweight pre-run state written by `connect_site`. It
+// captures only the site identifier and a display name, so the control panel at
+// /r/<runId> can render before any real or simulated run has been started.
+// Once start_split runs, a full RunMeta is written under RUN_META_KEY alongside
+// this record (the connect record is preserved for display).
+export const ConnectRecord = z.object({
+  runId: z.string().regex(/^[a-z0-9][a-z0-9-]{0,59}$/),
+  displayName: z.string().min(1),
+  originSource: OriginSource,
+  createdAt: z.number().int().nonnegative(),
+});
+export type ConnectRecord = z.infer<typeof ConnectRecord>;
 
 export const EventRecord = z.object({
   run_id: z.string().regex(/^[a-z0-9][a-z0-9-]{0,59}$/),

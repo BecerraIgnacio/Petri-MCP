@@ -26,125 +26,228 @@ export function renderLineageHtml(result: SimulationResult): string {
   <meta charset="utf-8">
   <title>petri-mcp · ${simId}</title>
   <style>
+    @font-face {
+      font-family: "Geist";
+      src: url("https://petri-mcp.vercel.app/fonts/Geist-Variable.woff2") format("woff2-variations");
+      font-weight: 100 900;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: "Geist Mono";
+      src: url("https://petri-mcp.vercel.app/fonts/GeistMono-Variable.woff2") format("woff2-variations");
+      font-weight: 100 900;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    :root {
+      --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      --font-mono: "Geist Mono", ui-monospace, "SF Mono", Monaco, Menlo, monospace;
+      --bg: #0a0a0a;
+      --bg-elev-1: #111111;
+      --bg-elev-2: #161616;
+      --fg: #ededed;
+      --fg-muted: #888888;
+      --fg-subtle: #555555;
+      --border: #1f1f1f;
+      --border-strong: #2a2a2a;
+      --accent: #0070f3;
+      --accent-fg: #ffffff;
+      --radius: 6px;
+      --radius-pill: 999px;
+      --header-h: 56px;
+    }
+
     *, *::before, *::after { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; height: 100%; }
     body {
-      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      background: #0a0a0a;
-      color: #e5e5e5;
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--fg);
       display: grid;
-      grid-template-rows: auto 1fr;
+      grid-template-rows: var(--header-h) 1fr;
       overflow: hidden;
+      font-size: 14px;
+      letter-spacing: -0.01em;
+      font-feature-settings: "cv11" 1, "ss01" 1;
+      -webkit-font-smoothing: antialiased;
     }
+
     header {
-      padding: 12px 18px;
-      border-bottom: 1px solid #1f1f1f;
-      background: linear-gradient(180deg, #141414 0%, #0f0f0f 100%);
+      padding: 0 var(--space-lg, 24px);
+      padding-left: 24px;
+      padding-right: 24px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(10, 10, 10, 0.85);
+      backdrop-filter: saturate(180%) blur(12px);
+      -webkit-backdrop-filter: saturate(180%) blur(12px);
       display: flex;
-      gap: 20px;
-      align-items: baseline;
+      gap: 12px;
+      align-items: center;
       flex-wrap: wrap;
       font-size: 12px;
-      color: #aaa;
+      color: var(--fg-muted);
+      height: var(--header-h);
     }
-    header h1 {
-      margin: 0;
+    header .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
       font-size: 14px;
       font-weight: 600;
-      color: #fafafa;
-      letter-spacing: -0.01em;
+      letter-spacing: -0.015em;
+      color: var(--fg);
+      margin-right: 8px;
+    }
+    header .brand-mark {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      background: var(--fg);
     }
     header .badge {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 2px 8px;
-      border-radius: 999px;
-      background: #1a1a1a;
-      border: 1px solid #2a2a2a;
+      padding: 2px 10px;
+      height: 22px;
+      border-radius: var(--radius-pill);
+      background: var(--bg-elev-1);
+      border: 1px solid var(--border-strong);
+      color: var(--fg-muted);
+      font-size: 11px;
       font-variant-numeric: tabular-nums;
+      letter-spacing: -0.005em;
     }
-    header .winner-badge {
-      background: #422006;
-      border-color: #92400e;
-      color: #fbbf24;
+    header .badge.winner-badge {
+      background: rgba(0, 112, 243, 0.12);
+      border-color: rgba(0, 112, 243, 0.4);
+      color: #69b1ff;
     }
+    header .badge.metric-badge {
+      margin-left: auto;
+      background: transparent;
+      border-color: var(--border-strong);
+      color: var(--fg);
+    }
+
     main {
       display: grid;
       grid-template-columns: 460px 1fr;
       min-height: 0;
     }
     #tree {
-      padding: 16px;
+      padding: 24px;
       overflow: auto;
-      border-right: 1px solid #1f1f1f;
-      background: #0a0a0a;
+      border-right: 1px solid var(--border);
+      background: var(--bg);
     }
-    .gen-row { margin-bottom: 22px; }
+    .gen-row { margin-bottom: 28px; }
     .gen-label {
-      font-size: 10px;
+      font-size: 11px;
       text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: #6b6b6b;
-      margin-bottom: 10px;
+      letter-spacing: 0.08em;
+      color: var(--fg-muted);
+      margin-bottom: 12px;
       font-weight: 600;
+      font-variant-numeric: tabular-nums;
     }
     .gen-cards { display: flex; flex-direction: column; gap: 6px; }
+
     .card {
-      padding: 10px 12px;
-      border: 1px solid #232323;
-      border-radius: 6px;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
       cursor: pointer;
-      background: #131313;
-      transition: border-color 0.1s, background 0.1s;
+      background: var(--bg-elev-1);
+      transition: border-color 0.12s ease, background 0.12s ease;
       font-size: 12px;
     }
-    .card:hover { border-color: #3a3a3a; background: #161616; }
+    .card:hover {
+      border-color: var(--border-strong);
+      background: var(--bg-elev-2);
+    }
     .card.selected {
-      border-color: #4ade80;
-      background: #0f1f15;
-      box-shadow: 0 0 0 1px #4ade80 inset;
+      border-color: var(--accent);
+      background: rgba(0, 112, 243, 0.06);
+      box-shadow: 0 0 0 1px var(--accent) inset;
     }
     .card .row1 {
       display: flex;
       align-items: baseline;
       gap: 8px;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }
-    .card .id { font-weight: 700; font-size: 13px; color: #fafafa; }
-    .card .parent { font-size: 11px; color: #6b6b6b; }
-    .card .rates {
+    .card .id {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--fg);
+      letter-spacing: -0.01em;
+    }
+    .card .parent {
+      font-family: var(--font-mono);
       font-size: 11px;
-      color: #888;
+      color: var(--fg-subtle);
+    }
+    .card .rates {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--fg-muted);
       font-variant-numeric: tabular-nums;
       margin-top: 2px;
-      letter-spacing: 0.01em;
+      letter-spacing: -0.005em;
     }
     .card .hypothesis {
       font-size: 11px;
-      color: #999;
-      margin-top: 6px;
-      font-style: italic;
-      line-height: 1.4;
+      color: var(--fg-muted);
+      margin-top: 8px;
+      line-height: 1.5;
     }
+
     .badge-outcome {
       display: inline-block;
-      font-size: 9px;
-      padding: 2px 6px;
-      border-radius: 3px;
-      letter-spacing: 0.05em;
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: var(--radius-pill);
+      letter-spacing: 0.04em;
       text-transform: uppercase;
       font-weight: 600;
-      margin-top: 6px;
+      margin-top: 8px;
+      border: 1px solid transparent;
     }
-    .out-seed { background: #1e3a8a40; color: #93c5fd; border: 1px solid #1e40af; }
-    .out-promoted { background: #14532d40; color: #86efac; border: 1px solid #166534; }
-    .out-abandoned { background: #18181b; color: #71717a; border: 1px solid #27272a; }
+    .out-seed {
+      background: var(--bg-elev-2);
+      color: var(--fg-muted);
+      border-color: var(--border-strong);
+    }
+    .out-promoted, .out-previous_champion {
+      background: transparent;
+      color: #69b1ff;
+      border-color: rgba(0, 112, 243, 0.4);
+    }
+    .out-abandoned {
+      background: transparent;
+      color: var(--fg-subtle);
+      border-color: var(--border);
+    }
     .out-current_champion {
-      background: #422006;
-      color: #fbbf24;
-      border: 1px solid #d97706;
+      background: var(--accent);
+      color: var(--accent-fg);
+      border-color: var(--accent);
     }
+
+    /* Cards on the winning lineage chain get a subtle accent tint. */
+    .card.lineage-winner {
+      border-color: rgba(0, 112, 243, 0.4);
+      background: rgba(0, 112, 243, 0.04);
+    }
+    .card.lineage-winner.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent) inset;
+    }
+
     .frame-wrap {
       position: relative;
       background: #fff;
@@ -158,27 +261,34 @@ export function renderLineageHtml(result: SimulationResult): string {
     }
     .frame-meta {
       position: absolute;
-      top: 8px;
-      right: 8px;
-      background: #0a0a0aaa;
-      backdrop-filter: blur(6px);
-      color: #fafafa;
+      top: 12px;
+      right: 12px;
+      background: rgba(10, 10, 10, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: var(--fg);
       padding: 6px 10px;
-      border-radius: 5px;
+      border-radius: var(--radius);
       font-size: 11px;
-      font-family: ui-monospace, "JetBrains Mono", monospace;
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.005em;
       pointer-events: none;
-      border: 1px solid #2a2a2a;
+      border: 1px solid var(--border-strong);
     }
   </style>
 </head>
 <body>
   <header>
-    <h1>🧬 petri-mcp · simulation explorer</h1>
+    <span class="brand">
+      <span class="brand-mark"></span>
+      <span>petri-mcp</span>
+    </span>
     <span class="badge">${simId}</span>
-    <span class="badge winner-badge">winner: ${winner}</span>
-    <span class="badge">${cfg.generations} gens × ${cfg.sessionsPerGen} sessions · split ${cfg.splitRatio}/${100 - cfg.splitRatio}</span>
-    <span class="badge" style="margin-left: auto">metric: ${metricName} ${metricArrow}</span>
+    <span class="badge winner-badge">winner ${winner}</span>
+    <span class="badge">${cfg.generations} gens × ${cfg.sessionsPerGen} sessions</span>
+    <span class="badge">split ${cfg.splitRatio}/${100 - cfg.splitRatio}</span>
+    <span class="badge metric-badge">${metricName} ${metricArrow}</span>
   </header>
   <main>
     <div id="tree"></div>
@@ -205,8 +315,20 @@ export function renderLineageHtml(result: SimulationResult): string {
       return e;
     }
 
+    // Walk the parent chain up from the winner to mark every entry in the winning lineage.
+    const winningChainIds = new Set();
+    {
+      let cur = data.lineage.find(function (e) { return e.id === data.winner; });
+      while (cur) {
+        winningChainIds.add(cur.id);
+        if (!cur.parent) break;
+        cur = data.lineage.find(function (e) { return e.id === cur.parent; });
+      }
+    }
+
     function buildCard(entry) {
       const card = el('div', 'card');
+      if (winningChainIds.has(entry.id)) card.classList.add('lineage-winner');
       card.dataset.id = entry.id;
 
       const row1 = el('div', 'row1');
@@ -221,6 +343,13 @@ export function renderLineageHtml(result: SimulationResult): string {
           'intrinsic ' + fmt(entry.intrinsicRate, 3) + ' · observed ' + fmt(entry.observedRate, 3) + ' (' + entry.conversions + '/' + entry.sessions + ')'
         )
       );
+
+      if (Array.isArray(entry.championRuns) && entry.championRuns.length > 0) {
+        const summary = entry.championRuns
+          .map(function (r) { return 'g' + r.generation + ': ' + r.conversions + '/' + r.sessions + ' (' + fmt(r.observedRate, 3) + ')'; })
+          .join(' · ');
+        card.appendChild(el('div', 'rates', 'as champion → ' + summary));
+      }
 
       if (entry.hypothesis) {
         card.appendChild(el('div', 'hypothesis', entry.hypothesis));

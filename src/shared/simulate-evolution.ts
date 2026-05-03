@@ -2,12 +2,18 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 import { runUxUiEvolver } from "../agents/ux-ui-evolver/index.js";
-import type { EvolverOutput, Mutation, Variant } from "../agents/ux-ui-evolver/schema.js";
+import type {
+  EvolverOutput,
+  Mutation,
+  PreviousMutation,
+  Variant,
+} from "../agents/ux-ui-evolver/schema.js";
 import { runScorer } from "../agents/scorer/index.js";
 import { runVibeIdentifier } from "../agents/vibe-identifier/index.js";
 import type { VibeIdentifierOk } from "../agents/vibe-identifier/schema.js";
 import { LocalFileSource, type FileSource } from "./file-source.js";
-import { applyVariant } from "./apply-mutations.js";
+import { LiveSiteSource } from "./sources/live-site.js";
+import { applyVariant, injectBaseHref } from "./apply-mutations.js";
 import { isHtmlPath } from "./inject-reporter.js";
 import { pickPromotion } from "./score-generation.js";
 import { findHighestVariantNumber } from "./evolve-next.js";
@@ -53,12 +59,39 @@ export interface SimulateEvolutionInput {
   renderToDir?: string;
 }
 
+/** Per-variant file payload — shape every consumer of `onVariantsReady` needs to upload variants somewhere. */
+export interface SimVariantFile {
+  path: string;
+  content: string;
+}
+
 export interface SimulateEvolutionDeps {
   evolver?: typeof runUxUiEvolver;
   scorer?: typeof runScorer;
   vibe?: typeof runVibeIdentifier;
   rng?: () => number;
   now?: () => number;
+  /**
+   * Called once per generation, *after* promotion is recorded. Receives the
+   * full lineage as it stands at that moment so consumers (e.g. the SSE
+   * dashboard) can push live updates without inspecting internal state.
+   */
+  onGenerationComplete?: (data: {
+    generation: number;
+    summary: SimGenerationSummary;
+    lineageSnapshot: LineageEntry[];
+  }) => void | Promise<void>;
+  /**
+   * Called once after the final generation, before the result is returned.
+   * Receives the seed + every generated challenger keyed by variant id, with
+   * each variant's file map flattened to `{path, content}` pairs. Lets a
+   * caller upload the whole tree (e.g. to Vercel Blob) without re-deriving it.
+   */
+  onVariantsReady?: (data: {
+    simId: string;
+    result: SimulationResult;
+    variantsByGeneration: Map<number, Map<string, SimVariantFile[]>>;
+  }) => void | Promise<void>;
 }
 
 /** mulberry32 again — keep simulator and synthesize-events on the same PRNG so a fixed seed gives a stable end-to-end story. */
@@ -156,6 +189,44 @@ async function dumpVariant(
   }
 }
 
+/**
+ * Pull the mutations from every step on the winning lineage chain (seed → current
+ * champion). The evolver uses this to know what axes have already been explored
+ * so it can prefer DIFFERENT kinds/selectors this generation. We emit one
+ * `PreviousMutation` per individual mutation; the agent prompt collapses them.
+ */
+function gatherChampionLineageMutations(
+  championId: string,
+  lineageById: Map<string, LineageEntry>,
+): PreviousMutation[] {
+  const out: PreviousMutation[] = [];
+  let cur: LineageEntry | undefined = lineageById.get(championId);
+  // Walk seed-side first by collecting then reversing — top-down order is
+  // friendlier for the LLM to read.
+  const chain: LineageEntry[] = [];
+  while (cur) {
+    chain.push(cur);
+    if (!cur.parent) break;
+    cur = lineageById.get(cur.parent);
+  }
+  chain.reverse();
+  for (const entry of chain) {
+    if (!entry.mutations || entry.mutations.length === 0) continue;
+    for (const m of entry.mutations) {
+      const summary: PreviousMutation = {
+        generation: entry.generation,
+        kind: m.kind,
+      };
+      if ("file" in m && m.file) summary.file = m.file;
+      if ("selector" in m && m.selector) summary.selector = m.selector;
+      if (m.kind === "css_property" && m.property) summary.property = m.property;
+      if (m.kind === "css_variable") summary.property = m.variable;
+      out.push(summary);
+    }
+  }
+  return out;
+}
+
 function applyMutationsToFiles(
   base: VariantFiles,
   variant: Variant,
@@ -212,8 +283,23 @@ export async function runSimulateEvolution(
   }
   const metric = pickEffectiveMetric(input, lock);
 
+  // For live-site sources, every iframed copy needs `<base href>` pointing at
+  // the original origin so `_next/static/...` scripts/CSS still resolve. We
+  // capture the base once here and inject into every HTML file (seed + each
+  // challenger) before storing.
+  const liveBaseUrl =
+    input.source instanceof LiveSiteSource ? input.source.getLiveUrl() : null;
+  const maybeInjectBase = (files: VariantFiles): VariantFiles => {
+    if (!liveBaseUrl) return files;
+    const out: VariantFiles = new Map();
+    for (const [path, content] of files) {
+      out.set(path, isHtmlPath(path) ? injectBaseHref(content, liveBaseUrl) : content);
+    }
+    return out;
+  };
+
   // 2) Read every file from source into the seed champion's VariantStore entry.
-  const seedFiles = await readAllFiles(input.source);
+  const seedFiles = maybeInjectBase(await readAllFiles(input.source));
   const store: VariantStore = new Map();
   store.set("v0", seedFiles);
 
@@ -247,7 +333,9 @@ export async function runSimulateEvolution(
     const tmpRoot = await materializeToTmp(championFiles);
     const localSource = new LocalFileSource(tmpRoot);
 
-    // 4) Evolve.
+    // 4) Evolve. Pass the champion-lineage mutations so the evolver knows
+    // what axes have already been explored and can favor diverse directions.
+    const previousMutations = gatherChampionLineageMutations(championId, lineageById);
     let evolverOut: EvolverOutput;
     try {
       evolverOut = await evolver({
@@ -256,6 +344,7 @@ export async function runSimulateEvolution(
         lockManifest: lock,
         targetMetric: metric,
         nVariants,
+        ...(previousMutations.length > 0 ? { previousMutations } : {}),
       });
     } finally {
       await rm(tmpRoot, { recursive: true, force: true });
@@ -316,15 +405,35 @@ export async function runSimulateEvolution(
       seed: genSeed,
     });
 
-    // Populate per-variant stats for THIS gen's lineage entries (champion already has prior gen's stats).
+    // Populate per-variant stats. For challengers, this is their first appearance —
+    // snapshot sessions/conversions/observedRate on the entry directly. For the
+    // current champion, append a ChampionRun so the canonical first-appearance
+    // numbers (set when the variant was a fresh challenger, or gen 0 for the seed)
+    // are preserved.
     const championLineage = lineageById.get(championId)!;
     for (const stat of synth.stats) {
       const e = lineageById.get(stat.variantId)!;
-      // For challengers, this is their first appearance — set sessions/conversions/observedRate.
-      // For the champion, accumulate (but show the latest snapshot as the canonical rate).
-      e.sessions = stat.sessions;
-      e.conversions = stat.conversions;
-      e.observedRate = stat.observedRate;
+      if (stat.variantId === championId) {
+        const runs = e.championRuns ?? [];
+        runs.push({
+          generation: gen,
+          sessions: stat.sessions,
+          conversions: stat.conversions,
+          observedRate: stat.observedRate,
+        });
+        e.championRuns = runs;
+        // Seed champion (gen 0) has no challenger-gen stats — fall back to
+        // gen-1's run as the canonical observed snapshot the first time.
+        if (e.generation === 0 && e.sessions === 0) {
+          e.sessions = stat.sessions;
+          e.conversions = stat.conversions;
+          e.observedRate = stat.observedRate;
+        }
+      } else {
+        e.sessions = stat.sessions;
+        e.conversions = stat.conversions;
+        e.observedRate = stat.observedRate;
+      }
     }
 
     // 8) Score.
@@ -351,20 +460,31 @@ export async function runSimulateEvolution(
     if (decision.promoted && decision.newChampion) {
       promoted = decision.newChampion;
       lineageById.get(promoted)!.outcome = "promoted";
-      // The previous champion was "current_champion" — now it's just "abandoned" history.
-      championLineage.outcome = "abandoned";
+      // The previous champion is no longer current — but it WAS a champion, so it
+      // belongs in the winning lineage chain, not lumped with challengers that
+      // never won. `previous_champion` carries that distinction.
+      championLineage.outcome = "previous_champion";
       championId = promoted;
       lineageById.get(championId)!.outcome = "current_champion";
     }
 
-    generationSummaries.push({
+    const summary: SimGenerationSummary = {
       generation: gen,
       championAtStart: championLineage.id,
       variantIds: [championLineage.id, ...challengers.map((c) => c.id)],
       scorerVerdict: scorerOut.variants as ScoredVariant[],
       promoted,
       promotionReason: decision.reason ?? (promoted ? `promoted ${promoted}` : "no promotion"),
-    });
+    };
+    generationSummaries.push(summary);
+
+    if (deps.onGenerationComplete) {
+      await deps.onGenerationComplete({
+        generation: gen,
+        summary,
+        lineageSnapshot: [...lineageById.values()],
+      });
+    }
   }
 
   const finishedAt = now();
@@ -399,6 +519,19 @@ export async function runSimulateEvolution(
       "utf8",
     );
     await writeLineageHtml(result, input.renderToDir);
+  }
+
+  if (deps.onVariantsReady) {
+    const variantsByGeneration = new Map<number, Map<string, SimVariantFile[]>>();
+    for (const entry of lineageById.values()) {
+      const files = store.get(entry.id);
+      if (!files) continue;
+      const flat: SimVariantFile[] = [...files].map(([path, content]) => ({ path, content }));
+      const bucket = variantsByGeneration.get(entry.generation) ?? new Map();
+      bucket.set(entry.id, flat);
+      variantsByGeneration.set(entry.generation, bucket);
+    }
+    await deps.onVariantsReady({ simId, result, variantsByGeneration });
   }
 
   return result;
