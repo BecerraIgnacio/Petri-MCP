@@ -7,7 +7,11 @@
   An MCP server that A/B-tests, scores, and rewrites your site in a closed loop — until users actually convert.</p>
 
   <p>
-    <a href="https://petri-mcp.vercel.app/api/mcp"><img alt="MCP endpoint" src="https://img.shields.io/badge/MCP-petri--mcp.vercel.app-000?style=flat-square&logo=anthropic&logoColor=white"></a>
+    <a href="https://petri-mcp.vercel.app"><img alt="Live on Vercel" src="https://img.shields.io/badge/▲%20Live%20on%20Vercel-petri--mcp.vercel.app-000?style=for-the-badge&logo=vercel&logoColor=white"></a>
+  </p>
+
+  <p>
+    <a href="https://petri-mcp.vercel.app/api/mcp"><img alt="MCP endpoint" src="https://img.shields.io/badge/MCP-%2Fapi%2Fmcp-000?style=flat-square&logo=anthropic&logoColor=white"></a>
     <img alt="Node" src="https://img.shields.io/badge/node-%3E=20-339933?style=flat-square&logo=node.js&logoColor=white">
     <img alt="TypeScript" src="https://img.shields.io/badge/typescript-strict-3178C6?style=flat-square&logo=typescript&logoColor=white">
     <img alt="Tests" src="https://img.shields.io/badge/tests-85%2B%20passing-3fb950?style=flat-square">
@@ -16,6 +20,7 @@
   </p>
 
   <p>
+    <a href="https://petri-mcp.vercel.app">Live site</a> ·
     <a href="#quickstart">Quickstart</a> ·
     <a href="#how-it-works">How it works</a> ·
     <a href="#mcp-tools">Tools</a> ·
