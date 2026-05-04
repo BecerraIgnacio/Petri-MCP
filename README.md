@@ -1,10 +1,15 @@
 <div align="center">
-  <img src="docs/assets/logo.png" alt="petri-mcp" width="120" />
+  <img src="docs/assets/logo.png" alt="Petri-MCP" width="120" />
 
-  <h1>petri-mcp</h1>
+  <h1>Petri-MCP</h1>
 
-  <p><strong>Your website, evolved.</strong><br/>
-  An MCP server that A/B-tests, scores, and rewrites your site in a closed loop — until users actually convert.</p>
+  <p><em>The future of A/B testing.</em></p>
+
+  <p><strong>v0 makes it beautiful.<br/>Petri makes it perform.</strong></p>
+
+  <p>Petri makes your website <em>evolve</em>, just like nature does — survival of the fittest.<br/>
+  It generates 3 variants from your site and redirects 10% of your user flow to them.<br/>
+  If any perform better, they <em>evolve</em>.</p>
 
   <p>
     <a href="https://petri-mcp.vercel.app"><img alt="Live on Vercel" src="https://img.shields.io/badge/▲%20Live%20on%20Vercel-petri--mcp.vercel.app-000?style=for-the-badge&logo=vercel&logoColor=white"></a>
@@ -29,15 +34,13 @@
   </p>
 
   <br/>
-  <img src="docs/assets/explorer.png" alt="petri-mcp simulation explorer — phylogenetic tree of variants" />
+  <img src="docs/assets/explorer.png" alt="Petri-MCP simulation explorer — phylogenetic tree of variants" />
   <p><sub><i>The simulation explorer: every generation, every variant, every win — with the rendered HTML one click away.</i></sub></p>
 </div>
 
 ---
 
-## Why petri-mcp
-
-v0 makes beautiful first drafts. petri-mcp makes them **perform**.
+## Why Petri-MCP
 
 - **Locks what makes the brand the brand.** A vibe-keeper agent reads your site and freezes the logo, palette, key phrases, fonts, and voice. Variants are *invalid by construction* if they touch a locked element — caught by a deterministic validator, not a second LLM.
 - **Mutates everything else.** A UX/UI evolver agent generates small, typed mutations (six kinds, from `text_content` to `css_variable`) targeted at the metric *you* name in plain English: `primary_cta_clicks`, `scroll_to_pricing`, `time_on_demo`, anything.
@@ -55,7 +58,7 @@ One MCP install. The site keeps improving.
 // claude_desktop_config.json (or any MCP client config)
 {
   "mcpServers": {
-    "petri": {
+    "petri-mcp": {
       "url": "https://petri-mcp.vercel.app/api/mcp"
     }
   }
@@ -66,7 +69,7 @@ That's it. Seven tools are now available to your agent.
 
 ### 2. See it work end-to-end (no setup)
 
-Call `simulate_evolution` against any public GitHub repo. petri runs the full closed loop in-memory — vibe → evolve → split → score → promote — across N generations of synthetic 90/10 traffic, then renders a phylogenetic tree you can click through.
+Call `simulate_evolution` against any public GitHub repo. Petri runs the full closed loop in-memory — vibe → evolve → split → score → promote — across N generations of synthetic 90/10 traffic, then renders a phylogenetic tree you can click through.
 
 ```jsonc
 {
